@@ -228,7 +228,22 @@ class MemoryDaemon:
         self._lock = threading.RLock()
         self.nodes: Dict[str, MemoryNode] = {}
         self.start_time = time.time()
+        self._last_save_time = 0.0
+        self._dirty = False
         self._load()
+        if self.auto_save:
+            self._flusher_thread = threading.Thread(target=self._periodic_flusher, daemon=True)
+            self._flusher_thread.start()
+
+    def _periodic_flusher(self) -> None:
+        """Periodic background flusher to batch disk persistence."""
+        while True:
+            time.sleep(5.0)
+            try:
+                if getattr(self, "_dirty", False) and (time.time() - getattr(self, "_last_save_time", 0.0) >= 5.0):
+                    self._save(force=True)
+            except Exception:
+                pass
 
     def _load(self) -> None:
         """Load memory substrate from persistent storage."""
@@ -247,9 +262,13 @@ class MemoryDaemon:
                 # Log to stderr and start fresh or keep existing
                 sys.stderr.write(f"[neuro-memory-daemon] Warning loading {self.db_path}: {e}\n")
 
-    def _save(self) -> None:
-        """Atomically persist memory substrate to disk."""
+    def _save(self, force: bool = False) -> None:
+        """Atomically persist memory substrate to disk with debounced rate-limiting."""
         if not self.auto_save:
+            return
+        now = time.time()
+        if not force and (now - getattr(self, "_last_save_time", 0.0) < 5.0):
+            self._dirty = True
             return
         with self._lock:
             try:
@@ -257,13 +276,15 @@ class MemoryDaemon:
                 temp_path = self.db_path.with_suffix(f".tmp.{os.getpid()}.{time.time_ns()}")
                 data = {
                     "version": __version__,
-                    "updated_at": time.time(),
+                    "updated_at": now,
                     "node_count": len(self.nodes),
                     "nodes": {node_id: node.to_dict() for node_id, node in self.nodes.items()}
                 }
                 with open(temp_path, "w", encoding="utf-8") as f:
                     json.dump(data, f, separators=(",", ":"))
                 temp_path.replace(self.db_path)
+                self._last_save_time = now
+                self._dirty = False
             except Exception as e:
                 sys.stderr.write(f"[neuro-memory-daemon] Error saving {self.db_path}: {e}\n")
 
