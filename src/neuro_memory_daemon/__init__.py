@@ -119,7 +119,22 @@ class MemoryNode:
     embedding: Dict[str, float] = field(default_factory=dict)  # token -> tf-idf / frequency weight
 
     def to_dict(self) -> Dict[str, Any]:
-        return asdict(self)
+        return {
+            "id": self.id,
+            "text": self.text,
+            "tags": list(self.tags),
+            "importance": self.importance,
+            "category": self.category,
+            "perspective": self.perspective,
+            "agent_id": self.agent_id,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
+            "last_accessed_at": self.last_accessed_at,
+            "access_count": self.access_count,
+            "synapses": dict(self.synapses),
+            "metadata": dict(self.metadata),
+            "embedding": dict(self.embedding),
+        }
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "MemoryNode":
@@ -270,23 +285,25 @@ class MemoryDaemon:
         if not force and (now - getattr(self, "_last_save_time", 0.0) < 5.0):
             self._dirty = True
             return
+
         with self._lock:
-            try:
-                self.db_path.parent.mkdir(parents=True, exist_ok=True)
-                temp_path = self.db_path.with_suffix(f".tmp.{os.getpid()}.{time.time_ns()}")
-                data = {
-                    "version": __version__,
-                    "updated_at": now,
-                    "node_count": len(self.nodes),
-                    "nodes": {node_id: node.to_dict() for node_id, node in self.nodes.items()}
-                }
-                with open(temp_path, "w", encoding="utf-8") as f:
-                    json.dump(data, f, separators=(",", ":"))
-                temp_path.replace(self.db_path)
-                self._last_save_time = now
-                self._dirty = False
-            except Exception as e:
-                sys.stderr.write(f"[neuro-memory-daemon] Error saving {self.db_path}: {e}\n")
+            data = {
+                "version": __version__,
+                "updated_at": now,
+                "node_count": len(self.nodes),
+                "nodes": {node_id: node.to_dict() for node_id, node in self.nodes.items()}
+            }
+            self._last_save_time = now
+            self._dirty = False
+
+        try:
+            self.db_path.parent.mkdir(parents=True, exist_ok=True)
+            temp_path = self.db_path.with_suffix(f".tmp.{os.getpid()}.{time.time_ns()}")
+            with open(temp_path, "w", encoding="utf-8") as f:
+                json.dump(data, f, separators=(",", ":"))
+            temp_path.replace(self.db_path)
+        except Exception as e:
+            sys.stderr.write(f"[neuro-memory-daemon] Error saving {self.db_path}: {e}\n")
 
     # -----------------------------------------------------------------------
     # Public API: Store
@@ -320,6 +337,7 @@ class MemoryDaemon:
         with self._lock:
             # Form initial synaptic connections based on associative similarity & recent temporal context
             synapses: Dict[str, float] = {}
+            candidates = []
             for other_id, other_node in self.nodes.items():
                 sim = _cosine_similarity(embedding, other_node.embedding)
                 
@@ -329,10 +347,16 @@ class MemoryDaemon:
                     sim += 0.15 * len(shared_tags)
                 sim = min(1.0, sim)
 
-                if sim >= 0.20:
-                    synapses[other_id] = round(sim, 4)
-                    # Bidirectional initial association with slight attenuation
-                    other_node.synapses[node_id] = round(sim * 0.9, 4)
+                if sim >= 0.25:
+                    candidates.append((other_id, sim, other_node))
+
+            # Maintain associative sparsity: connect to top 48 most salient associations
+            candidates.sort(key=lambda x: x[1], reverse=True)
+            for other_id, sim, other_node in candidates[:48]:
+                synapses[other_id] = round(sim, 4)
+                other_node.synapses[node_id] = round(sim * 0.9, 4)
+                if len(other_node.synapses) > 64:
+                    other_node.synapses = dict(sorted(other_node.synapses.items(), key=lambda kv: kv[1], reverse=True)[:48])
 
             new_node = MemoryNode(
                 id=node_id,
@@ -856,6 +880,11 @@ class MemoryDaemon:
                 for tid in synapses_to_remove:
                     node.synapses.pop(tid, None)
 
+                # Cap max synapses per node to retain associative sparsity
+                if len(node.synapses) > 48:
+                    pruned_synapses += len(node.synapses) - 48
+                    node.synapses = dict(sorted(node.synapses.items(), key=lambda kv: kv[1], reverse=True)[:48])
+
                 # Pruning working memories that decayed below threshold
                 if node.category == "working" and node.importance < prune_threshold and node.access_count <= 1:
                     nodes_to_delete.append(node_id)
@@ -867,7 +896,7 @@ class MemoryDaemon:
                 for remaining_node in self.nodes.values():
                     remaining_node.synapses.pop(nid, None)
 
-            self._save()
+            self._save(force=True)
             duration = round(time.time() - start_ts, 4)
 
             return {

@@ -32,7 +32,7 @@ class AgentSpooler:
     def __init__(
         self,
         daemon: Optional[MemoryDaemon] = None,
-        poll_interval: float = 2.5,
+        poll_interval: float = 20.0,
         max_tail_bytes: int = 16384,
     ) -> None:
         self.daemon = daemon or get_default_daemon()
@@ -192,7 +192,7 @@ class AgentSpooler:
             agent_id="antigravity",
             metadata={"source": "antigravity_transcript", "spooled_at": time.time()},
         )
-        self.daemon.trigger(res["id"], decay=0.8, threshold=0.1, max_hops=3)
+        self.daemon.trigger(res["id"], decay=0.8, threshold=0.25, max_hops=1)
 
     def _poll_grok(self) -> None:
         """Scan active Grok chat history sessions."""
@@ -250,7 +250,7 @@ class AgentSpooler:
             agent_id="grok",
             metadata={"source": "grok_session", "spooled_at": time.time()},
         )
-        self.daemon.trigger(res["id"], decay=0.8, threshold=0.1, max_hops=3)
+        self.daemon.trigger(res["id"], decay=0.8, threshold=0.25, max_hops=1)
 
     def _poll_civilization(self) -> None:
         """Scan Zoth Civilization autonomous colony reflections."""
@@ -289,7 +289,7 @@ class AgentSpooler:
                                 agent_id=f"civ_{agent_name.lower()}",
                                 metadata={"source": "civilization_subconscious"},
                             )
-                            self.daemon.trigger(res["id"], decay=0.85, threshold=0.1, max_hops=3)
+                            self.daemon.trigger(res["id"], decay=0.85, threshold=0.25, max_hops=1)
         except Exception:
             pass
 
