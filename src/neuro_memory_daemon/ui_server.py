@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import mimetypes
 import os
+import queue
 import sys
 import threading
 import time
@@ -32,6 +33,42 @@ from neuro_memory_daemon.compat import normalize_path, safe_read_text
 from neuro_memory_daemon.storage import StorageEngine, MemoryRecord
 from neuro_memory_daemon.synapse_engine import SynapseEngine
 from neuro_memory_daemon.graph_builder import GraphBuilder
+
+
+class EventBroadcaster:
+    """Thread-safe SSE event broadcaster for live agent/tool activity streaming."""
+
+    def __init__(self) -> None:
+        self._subscribers: List[queue.Queue] = []
+        self._lock = threading.Lock()
+
+    def subscribe(self) -> queue.Queue:
+        q: queue.Queue = queue.Queue(maxsize=200)
+        with self._lock:
+            self._subscribers.append(q)
+        return q
+
+    def unsubscribe(self, q: queue.Queue) -> None:
+        with self._lock:
+            if q in self._subscribers:
+                self._subscribers.remove(q)
+
+    def broadcast(self, event_type: str, data: Any) -> None:
+        event = {
+            "type": event_type,
+            "data": data,
+            "timestamp": time.time(),
+        }
+        with self._lock:
+            subscribers = list(self._subscribers)
+        for q in subscribers:
+            try:
+                q.put_nowait(event)
+            except queue.Full:
+                pass
+
+
+EVENT_BROADCASTER = EventBroadcaster()
 
 
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
@@ -64,13 +101,22 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(payload)))
         self._send_cors_headers()
         self.end_headers()
-        self.wfile.write(payload)
+        if not getattr(self, "_is_head", False):
+            self.wfile.write(payload)
 
     def do_OPTIONS(self) -> None:
         """Handle CORS preflight requests."""
         self.send_response(204)
         self._send_cors_headers()
         self.end_headers()
+
+    def do_HEAD(self) -> None:
+        """Handle HEAD requests for static UI and REST API."""
+        self._is_head = True
+        try:
+            self.do_GET()
+        finally:
+            self._is_head = False
 
     def do_GET(self) -> None:
         """Handle GET requests for static UI and REST API."""
@@ -89,6 +135,36 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
                 "service": "neuro-memory-daemon",
                 "timestamp": time.time(),
             })
+            return
+
+        # Real-time Server-Sent Events (SSE) stream for 3D live trigger visuals
+        if path in ("/api/stream", "/v1/stream"):
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Connection", "keep-alive")
+            self._send_cors_headers()
+            self.end_headers()
+
+            q = EVENT_BROADCASTER.subscribe()
+            init_payload = json.dumps({"status": "connected", "service": "neuro-memory-daemon", "timestamp": time.time()})
+            self.wfile.write(f"data: {init_payload}\n\n".encode("utf-8"))
+            self.wfile.flush()
+
+            try:
+                while True:
+                    try:
+                        event = q.get(timeout=10.0)
+                        msg = json.dumps(event, default=str)
+                        self.wfile.write(f"data: {msg}\n\n".encode("utf-8"))
+                        self.wfile.flush()
+                    except queue.Empty:
+                        self.wfile.write(b": ping\n\n")
+                        self.wfile.flush()
+            except (BrokenPipeError, ConnectionResetError, OSError):
+                pass
+            finally:
+                EVENT_BROADCASTER.unsubscribe(q)
             return
 
         daemon = self._get_daemon()
@@ -198,7 +274,8 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
                 self.send_header("Content-Length", str(len(raw_bytes)))
                 self._send_cors_headers()
                 self.end_headers()
-                self.wfile.write(raw_bytes)
+                if not getattr(self, "_is_head", False):
+                    self.wfile.write(raw_bytes)
             return
 
         elif path in ("/api/metacognition", "/v1/metacognition"):
@@ -259,6 +336,7 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
                 agent_id=body.get("agent_id", "default"),
                 metadata=body.get("metadata") or body.get("raw_payload"),
             )
+            EVENT_BROADCASTER.broadcast("memory_created", res)
             self._send_json({"status": "stored", "id": res["id"], "memory": res}, status=201)
             return
 
@@ -298,24 +376,64 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
             self._send_json({"query": q, "results": results, "count": len(results)})
             return
 
-        # Trigger / Rehearse Memory
-        if "/trigger" in path:
+        # Trigger / Spreading Activation / Action Potential
+        if path in ("/api/trigger", "/v1/trigger") or "/trigger" in path:
             parts = path.split("/")
-            # e.g. /api/memories/<id>/trigger or /v1/memories/<id>/trigger
-            mem_id = parts[-2] if parts[-1] == "trigger" else ""
-            if mem_id and mem_id in daemon.nodes:
-                node = daemon.nodes[mem_id]
-                node.access_count += 1
-                node.last_accessed_at = time.time()
+            url_mem_id = parts[-2] if len(parts) >= 3 and parts[-1] == "trigger" and parts[-2] not in ("api", "v1") else ""
+            seed = body.get("seed") or body.get("id") or url_mem_id or body.get("cue") or ""
+            text = body.get("text", "")
+            tags = body.get("tags") or []
+            category = body.get("category", "episodic")
+            perspective = body.get("perspective", "agent")
+            agent_id = body.get("agent_id", "default")
+            decay = float(body.get("decay", 0.75))
+            threshold = float(body.get("threshold", 0.1))
+            max_hops = int(body.get("max_hops", 3))
+
+            stored_mem = None
+            if text:
+                stored_mem = daemon.store(
+                    text=text,
+                    tags=tags,
+                    importance=float(body.get("importance", 0.8)),
+                    category=category,
+                    perspective=perspective,
+                    agent_id=agent_id,
+                    metadata=body.get("metadata") or body.get("raw_payload"),
+                )
+                if not seed:
+                    seed = stored_mem["id"]
+                EVENT_BROADCASTER.broadcast("memory_created", stored_mem)
+
+            if not seed and daemon.nodes:
+                seed = next(iter(daemon.nodes.keys()))
+
+            cascade = daemon.simulate_spreading_activation(
+                seed=seed,
+                decay=decay,
+                threshold=threshold,
+                max_hops=max_hops,
+                auto_reinforce=True,
+            )
+
+            acc_count = 1
+            if seed in daemon.nodes:
+                daemon.nodes[seed].access_count += 1
+                daemon.nodes[seed].last_accessed_at = time.time()
+                acc_count = daemon.nodes[seed].access_count
                 daemon._save()
-                self._send_json({
-                    "status": "triggered",
-                    "id": mem_id,
-                    "access_count": node.access_count,
-                    "last_accessed_at": node.last_accessed_at,
-                })
-                return
-            self._send_json({"status": "acknowledged", "id": mem_id})
+
+            response_data = {
+                "status": "triggered",
+                "id": seed,
+                "seed": seed,
+                "access_count": acc_count,
+                "last_accessed_at": time.time(),
+                "cascade": cascade,
+                "memory": stored_mem,
+            }
+            EVENT_BROADCASTER.broadcast("trigger", response_data)
+            self._send_json(response_data, status=200)
             return
 
         # Link two memories
@@ -367,7 +485,9 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
             ach_d = float(body.get("ach_delta", 0.0))
             ser_d = float(body.get("serotonin_delta", 0.0))
             ns.pulse(ne_delta=ne_d, da_delta=da_d, ach_delta=ach_d, serotonin_delta=ser_d)
-            self._send_json(ns.get_status())
+            status_data = ns.get_status()
+            EVENT_BROADCASTER.broadcast("neuromodulator_pulse", status_data)
+            self._send_json(status_data)
             return
 
         # Explicit Neuromodulator Levels Override
@@ -446,7 +566,8 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
                 self.send_header("Content-Length", str(len(content)))
                 self._send_cors_headers()
                 self.end_headers()
-                self.wfile.write(content)
+                if not getattr(self, "_is_head", False):
+                    self.wfile.write(content)
                 return
 
             # Fallback embedded Material 3 UI if public/index.html is missing
@@ -466,7 +587,8 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
                 self.send_header("Content-Length", str(len(data)))
                 self._send_cors_headers()
                 self.end_headers()
-                self.wfile.write(data)
+                if not getattr(self, "_is_head", False):
+                    self.wfile.write(data)
                 return
 
         self.send_error(404, f"File Not Found: {req_path}")
@@ -499,7 +621,8 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(data)))
         self._send_cors_headers()
         self.end_headers()
-        self.wfile.write(data)
+        if not getattr(self, "_is_head", False):
+            self.wfile.write(data)
 
     def log_message(self, format: str, *args: Any) -> None:
         """Suppress default HTTP logging for clean terminal output."""
@@ -531,6 +654,13 @@ class MemoryUIServer:
         """Start the HTTP server."""
         url = f"http://{self.host}:{self.port}"
         print(f"🚀 Neural Memory Studio (Material 3 influenced) running at {url}")
+
+        # Auto-start live agent spooler
+        try:
+            from .spooler import start_spooler
+            start_spooler(daemon=self.daemon)
+        except Exception:
+            pass
 
         if open_browser:
             webbrowser.open(url)

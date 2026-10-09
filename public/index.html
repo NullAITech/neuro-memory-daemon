@@ -3,10 +3,89 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Neuro-Memory Studio — Cognitive Synaptic Daemon</title>
+  <title>Neuro-Memory Studio — 3D Cosmic Neural Substrate & Synaptic Daemon</title>
+  <meta name="description" content="High-definition 3D Cosmic Nebula and biological-fidelity memory substrate for sovereign AI agents with STDP, spreading activation, and liquid plasma synapses.">
+  <link rel="canonical" href="https://neuro-memory.nullai.tech/">
+
+  <!-- OpenGraph & Twitter Card Headers -->
+  <meta property="og:title" content="Neuro-Memory Studio — 3D Cosmic Neural Substrate & Synaptic Daemon">
+  <meta property="og:description" content="High-definition 3D Cosmic Nebula and biological-fidelity memory substrate for sovereign AI agents with STDP, spreading activation, and liquid plasma synapses.">
+  <meta property="og:url" content="https://neuro-memory.nullai.tech/">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://nullai.tech/assets/brand/neuro-memory-preview.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:site" content="@1nc0gn30">
+  <meta name="twitter:creator" content="@1nc0gn30">
+  <meta name="twitter:title" content="Neuro-Memory Studio — 3D Cosmic Neural Substrate">
+  <meta name="twitter:description" content="High-definition 3D Cosmic Nebula and biological-fidelity memory substrate for sovereign AI agents with STDP, spreading activation, and liquid plasma synapses.">
+  <meta name="twitter:image" content="https://nullai.tech/assets/brand/neuro-memory-preview.png">
+
+  <!-- AEO & SEO Schema.org Graph -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "@id": "https://neuro-memory.nullai.tech/#app",
+        "name": "Neuro-Memory Daemon — 3D Cosmic Neural Substrate",
+        "url": "https://neuro-memory.nullai.tech",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Linux, macOS, Windows",
+        "description": "High-definition 3D Cosmic Nebula and biological-fidelity memory substrate for sovereign AI agents with STDP, spreading activation, and liquid plasma synapses.",
+        "offers": {
+          "@type": "Offer",
+          "price": "19.00",
+          "priceCurrency": "USD"
+        },
+        "creator": {
+          "@type": "Person",
+          "name": "Neal Frazier",
+          "url": "https://nealfrazier.tech"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://neuro-memory.nullai.tech/#faq",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "How does Neuro-Memory simulate the human brain?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Neuro-Memory utilizes Spike-Timing-Dependent Plasticity (STDP), Hippocampal CA3 pattern completion, and spreading activation across 5 hyperfocused galaxy clusters with liquid plasma action potentials."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What AI agents and tools integrate with the substrate?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "All ZothOS agents including Antigravity, Grok, Claude, Hermes, and Cursor automatically trigger associative memory engrams and STDP reinforcement."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is my data stored locally and privately?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Neuro-Memory operates with zero external egress, storing all engrams in high-speed local SQLite WAL substrates with client-side 3D WebGL rendering."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Google+Sans+Text:wght@400;500;600&family=Roboto+Mono:wght@400;500;600&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+  <!-- 3D WebGL Engine Vendors (Local Offline Assets) -->
+  <script src="vendor/three.min.js"></script>
+  <script src="vendor/OrbitControls.js"></script>
+  <script src="nebula_engine.js"></script>
   <style>
     :root {
       --md-primary: #1a73e8;
@@ -78,6 +157,11 @@
       -webkit-font-smoothing: antialiased;
     }
 
+    html, body {
+      max-width: 100vw;
+      overflow-x: hidden;
+    }
+
     body {
       background-color: var(--md-background);
       color: var(--md-on-surface);
@@ -98,8 +182,10 @@
       position: sticky;
       top: 0;
       z-index: 100;
-      gap: 16px;
+      gap: 12px;
       box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+      max-width: 100vw;
+      width: 100%;
     }
 
     .brand-section {
@@ -108,6 +194,7 @@
       gap: 12px;
       text-decoration: none;
       color: inherit;
+      min-width: 0;
     }
 
     .brand-icon-wrapper {
@@ -121,6 +208,11 @@
       color: #fff;
       font-size: 22px;
       box-shadow: 0 2px 6px rgba(26,115,232,0.3);
+      flex-shrink: 0;
+    }
+
+    .brand-text {
+      min-width: 0;
     }
 
     .brand-text h1 {
@@ -131,6 +223,7 @@
       display: flex;
       align-items: center;
       gap: 8px;
+      white-space: nowrap;
     }
 
     .brand-text .badge {
@@ -147,12 +240,17 @@
     .brand-text p {
       font-size: 12px;
       color: var(--md-on-surface-variant);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .app-bar-actions {
       display: flex;
       align-items: center;
       gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
     }
 
     .status-pill {
@@ -251,10 +349,14 @@
     nav.google-nav-tabs {
       background-color: var(--md-surface);
       border-bottom: 1px solid var(--md-outline-variant);
-      padding: 0 24px;
+      padding: 0 16px;
       display: flex;
       gap: 8px;
       overflow-x: auto;
+      max-width: 100vw;
+      width: 100%;
+      box-sizing: border-box;
+      -webkit-overflow-scrolling: touch;
     }
 
     .nav-tab {
@@ -272,6 +374,7 @@
       border-bottom: 3px solid transparent;
       transition: all 0.15s ease;
       white-space: nowrap;
+      flex-shrink: 0;
     }
     .nav-tab:hover {
       color: var(--md-primary);
@@ -474,6 +577,61 @@
     @media (max-width: 960px) {
       .stream-layout {
         grid-template-columns: 1fr;
+      }
+      header.google-app-bar {
+        padding: 10px 14px;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .brand-text p {
+        display: none;
+      }
+      .app-bar-actions {
+        gap: 6px;
+      }
+      .sales-funnel-banner {
+        padding: 12px 14px;
+        gap: 10px;
+      }
+      .funnel-content {
+        min-width: 100%;
+      }
+      .funnel-actions {
+        width: 100%;
+        justify-content: flex-start;
+      }
+      .quick-action-potential-bar {
+        padding: 10px;
+        gap: 8px;
+      }
+      .quick-input-text, .quick-input-tags, .quick-select-cat, .btn-fire-pulse {
+        width: 100%;
+        min-width: 0;
+      }
+    }
+
+    @media (max-width: 600px) {
+      header.google-app-bar {
+        padding: 8px 10px;
+      }
+      .brand-icon-wrapper {
+        width: 32px;
+        height: 32px;
+        font-size: 18px;
+      }
+      .brand-text h1 {
+        font-size: 14px;
+      }
+      main.studio-content {
+        padding: 12px 8px;
+        gap: 14px;
+      }
+      .telemetry-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+      #nebula-3d-wrapper {
+        height: 480px;
       }
     }
 
@@ -737,13 +895,488 @@
       overflow-x: auto;
       color: var(--md-on-surface);
     }
+
+    /* Sovereign Sales Funnel Banner */
+    .sales-funnel-banner {
+      background: linear-gradient(135deg, rgba(212, 175, 55, 0.12), rgba(11, 11, 18, 0.9));
+      border: 1px solid rgba(212, 175, 55, 0.4);
+      border-radius: var(--radius-lg);
+      backdrop-filter: blur(12px);
+      padding: 14px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 24px rgba(212, 175, 55, 0.08), 0 2px 8px rgba(0, 0, 0, 0.5);
+      flex-wrap: wrap;
+    }
+    .funnel-badge {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      padding: 5px 12px;
+      border-radius: var(--radius-full);
+      background: linear-gradient(135deg, #D4AF37, #B8860B);
+      color: #08080B;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      animation: pulse-glow 2s infinite ease-in-out;
+    }
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 8px rgba(212, 175, 55, 0.4); }
+      50% { box-shadow: 0 0 18px rgba(212, 175, 55, 0.8); }
+    }
+    .funnel-content {
+      flex: 1;
+      min-width: 260px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    .funnel-headline {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--zoth-text-2, #EDEFF2);
+    }
+    .funnel-pricing {
+      font-size: 13px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .price-strikethrough {
+      text-decoration: line-through;
+      color: var(--zoth-muted, #9AA0A6);
+      font-size: 12px;
+    }
+    .price-deal {
+      color: #FFD700;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      background: rgba(212, 175, 55, 0.15);
+      padding: 2px 8px;
+      border-radius: 4px;
+      border: 1px solid rgba(212, 175, 55, 0.3);
+    }
+    .funnel-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .funnel-btn {
+      padding: 7px 16px;
+      border-radius: var(--radius-full);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+      text-decoration: none;
+    }
+    .funnel-btn-stripe {
+      background: linear-gradient(135deg, #635BFF, #4840D6);
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(99, 91, 255, 0.35);
+    }
+    .funnel-btn-stripe:hover {
+      box-shadow: 0 4px 14px rgba(99, 91, 255, 0.55);
+      transform: translateY(-1px);
+    }
+    .funnel-btn-solana {
+      background: linear-gradient(135deg, #14F195, #9945FF);
+      color: #08080B;
+      font-weight: 700;
+      box-shadow: 0 2px 8px rgba(20, 241, 149, 0.35);
+    }
+    .funnel-btn-solana:hover {
+      box-shadow: 0 4px 14px rgba(20, 241, 149, 0.55);
+      transform: translateY(-1px);
+    }
+    .funnel-btn-key {
+      background: rgba(212, 175, 55, 0.15);
+      color: #F5E6AB;
+      border: 1px solid rgba(212, 175, 55, 0.35);
+    }
+    .funnel-btn-key:hover {
+      background: rgba(212, 175, 55, 0.25);
+    }
+
+    /* Quick Ingest & Action Potential Bar */
+    .quick-trigger-bar {
+      background: rgba(18, 18, 26, 0.85);
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      border-radius: var(--radius-lg);
+      padding: 12px 18px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 16px;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+      flex-wrap: wrap;
+    }
+    .quick-input-text {
+      flex: 2;
+      min-width: 220px;
+      background: rgba(8, 8, 11, 0.7);
+      border: 1px solid #2A2A33;
+      border-radius: var(--radius-md);
+      padding: 9px 14px;
+      color: #EDEFF2;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .quick-input-text:focus {
+      border-color: #D4AF37;
+      box-shadow: 0 0 8px rgba(212, 175, 55, 0.25);
+    }
+    .quick-input-tags {
+      flex: 1;
+      min-width: 140px;
+      background: rgba(8, 8, 11, 0.7);
+      border: 1px solid #2A2A33;
+      border-radius: var(--radius-md);
+      padding: 9px 14px;
+      color: #EDEFF2;
+      font-size: 13px;
+      outline: none;
+    }
+    .quick-select-cat {
+      background: rgba(8, 8, 11, 0.7);
+      border: 1px solid #2A2A33;
+      border-radius: var(--radius-md);
+      padding: 9px 12px;
+      color: #EDEFF2;
+      font-size: 13px;
+      outline: none;
+      cursor: pointer;
+    }
+    .btn-fire-pulse {
+      background: linear-gradient(135deg, #D4AF37, #FFD700);
+      color: #08080B;
+      font-weight: 700;
+      border: none;
+      padding: 9px 20px;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      box-shadow: 0 2px 10px rgba(212, 175, 55, 0.4);
+      transition: all 0.2s ease;
+    }
+    .btn-fire-pulse:hover {
+      box-shadow: 0 4px 18px rgba(212, 175, 55, 0.7);
+      transform: translateY(-1px);
+    }
+
+    /* 3D Nebula Viewport Container */
+    #nebula-3d-wrapper {
+      position: relative;
+      width: 100%;
+      height: 640px;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      background: #08080B;
+      border: 1px solid #2A2A33;
+      box-shadow: 0 8px 36px rgba(0, 0, 0, 0.65);
+    }
+    #nebula-3d-container {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+
+    /* 3D Galaxy Navigator Bar */
+    .galaxy-nav-toolbar {
+      position: absolute;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(11, 11, 18, 0.85);
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      border-radius: var(--radius-full);
+      padding: 5px 8px;
+      display: flex;
+      gap: 4px;
+      backdrop-filter: blur(12px);
+      z-index: 20;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+      max-width: 95%;
+      overflow-x: auto;
+    }
+    .galaxy-nav-btn {
+      padding: 5px 12px;
+      border-radius: var(--radius-full);
+      border: none;
+      background: transparent;
+      color: #9AA0A6;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+      transition: all 0.18s ease;
+    }
+    .galaxy-nav-btn:hover {
+      color: #F5E6AB;
+      background: rgba(212, 175, 55, 0.12);
+    }
+    .galaxy-nav-btn.active {
+      color: #08080B;
+      background: linear-gradient(135deg, #D4AF37, #FFD700);
+      box-shadow: 0 2px 8px rgba(212, 175, 55, 0.35);
+    }
+
+    /* 3D HUD Telemetry Overlay */
+    .nebula-hud-left {
+      position: absolute;
+      bottom: 16px;
+      left: 16px;
+      background: rgba(11, 11, 18, 0.85);
+      border: 1px solid rgba(212, 175, 55, 0.25);
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+      backdrop-filter: blur(10px);
+      z-index: 20;
+      font-size: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      color: #EDEFF2;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+      min-width: 190px;
+    }
+    .hud-stat-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .hud-stat-val {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      color: #D4AF37;
+    }
+    .nebula-hud-right {
+      position: absolute;
+      bottom: 16px;
+      right: 16px;
+      background: rgba(11, 11, 18, 0.85);
+      border: 1px solid rgba(212, 175, 55, 0.25);
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+      backdrop-filter: blur(10px);
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* Engram Slide-Over / Inspector Modal */
+    .engram-inspector-modal {
+      position: fixed;
+      top: 0;
+      right: -420px;
+      width: 400px;
+      max-width: 90vw;
+      height: 100vh;
+      background: rgba(11, 11, 18, 0.95);
+      border-left: 1px solid rgba(212, 175, 55, 0.35);
+      backdrop-filter: blur(16px);
+      box-shadow: -8px 0 32px rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      overflow-y: auto;
+    }
+    .engram-inspector-modal.open {
+      right: 0;
+    }
+    .inspector-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #2A2A33;
+      padding-bottom: 12px;
+    }
+    .inspector-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #D4AF37;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .inspector-close-btn {
+      background: none;
+      border: none;
+      color: #9AA0A6;
+      font-size: 20px;
+      cursor: pointer;
+    }
+    .inspector-close-btn:hover { color: #FFF; }
+    .inspector-body {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      font-size: 13px;
+      color: #EDEFF2;
+    }
+    .inspector-text-card {
+      background: rgba(8, 8, 11, 0.8);
+      border: 1px solid #2A2A33;
+      border-radius: var(--radius-md);
+      padding: 14px;
+      line-height: 1.5;
+      font-size: 13px;
+    }
+    .inspector-meta-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: #9AA0A6;
+    }
+
+    /* Pro Paywall Modal */
+    .pro-modal-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    .pro-modal-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .pro-card {
+      background: linear-gradient(135deg, #12121A, #08080B);
+      border: 1px solid rgba(212, 175, 55, 0.45);
+      border-radius: var(--radius-xl);
+      padding: 32px;
+      max-width: 520px;
+      width: 90%;
+      box-shadow: 0 12px 48px rgba(0,0,0,0.8), 0 0 24px rgba(212, 175, 55, 0.15);
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .pro-card h2 {
+      font-family: var(--zoth-font-display, Georgia, serif);
+      color: #D4AF37;
+      font-size: 24px;
+    }
+    .pro-perks-list {
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      font-size: 13px;
+      color: #EDEFF2;
+      background: rgba(255, 255, 255, 0.03);
+      padding: 16px;
+      border-radius: var(--radius-md);
+      border: 1px solid #2A2A33;
+    }
+    .pro-perk-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .pro-perk-icon { color: #10B981; }
+    .pro-actions-col {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .pro-stripe-btn {
+      background: linear-gradient(135deg, #635BFF, #4840D6);
+      color: #ffffff;
+      padding: 12px;
+      border-radius: var(--radius-md);
+      font-weight: 700;
+      text-decoration: none;
+      display: block;
+      box-shadow: 0 4px 16px rgba(99, 91, 255, 0.4);
+    }
+    .pro-solana-btn {
+      background: linear-gradient(135deg, #14F195, #9945FF);
+      color: #08080B;
+      padding: 12px;
+      border-radius: var(--radius-md);
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+    }
+    .pro-key-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .pro-key-input {
+      flex: 1;
+      background: #08080B;
+      border: 1px solid #2A2A33;
+      border-radius: var(--radius-sm);
+      padding: 8px 12px;
+      color: #EDEFF2;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      outline: none;
+    }
+    .pro-key-btn {
+      background: rgba(212, 175, 55, 0.2);
+      border: 1px solid rgba(212, 175, 55, 0.4);
+      color: #F5E6AB;
+      border-radius: var(--radius-sm);
+      padding: 8px 14px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .pro-badge-active {
+      background: rgba(212, 175, 55, 0.2);
+      color: #FFD700;
+      border: 1px solid #D4AF37;
+      padding: 4px 10px;
+      border-radius: var(--radius-full);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
   </style>
   
   <link rel="stylesheet" href="zoth-theme.css">
 </head>
 <body data-theme="dark">
-<div class="zoth-brand-bar"><span class="zoth-z">Z</span><span class="zoth-name">Zoth Studio</span><span class="zoth-tool">Neuro Memory Daemon</span><span class="zoth-spacer"></span><span class="zoth-badge">NULLAI · SOVEREIGN</span></div>
-
 <!-- Header -->
   <header class="google-app-bar">
     <div class="brand-section">
@@ -755,9 +1388,11 @@
     </div>
 
     <div class="app-bar-actions">
+      <span id="pro-status-badge" class="badge-tag" style="background:rgba(212,175,55,0.15); color:#F5E6AB; border:1px solid rgba(212,175,55,0.35); border-radius:9999px; padding:5px 12px; font-size:11px; font-weight:700; cursor:pointer;" onclick="openProModal()">⭐ FREE TIER</span>
+
       <div class="status-pill" id="daemon-status-pill">
         <span class="status-indicator-dot"></span>
-        <span id="daemon-status-text">Daemon Online :8788</span>
+        <span id="daemon-status-text">Daemon Online :8094</span>
       </div>
 
       <button class="btn btn-tonal" onclick="openIngestModal()">
@@ -781,7 +1416,7 @@
   <!-- Navigation Tabs -->
   <nav class="google-nav-tabs">
     <button class="nav-tab active" onclick="switchTab('graph')">
-      <span>🌐</span> Synaptic Topology Graph
+      <span>🌌</span> 3D Cosmic Neural Nebula
     </button>
     <button class="nav-tab" onclick="switchTab('stream')">
       <span>📜</span> Memory Stream & Feed
@@ -802,6 +1437,20 @@
 
   <!-- Studio Content -->
   <main class="studio-content">
+
+    <!-- Sovereign Sales Funnel Banner -->
+    <div class="sales-funnel-banner">
+      <div class="funnel-badge">⚡ LIMITED FOUNDING ACCESS</div>
+      <div class="funnel-content">
+        <span class="funnel-headline">Unlock Sovereign 3D Neuro-Memory Pro: Real-time Spreading Activation & Infinite Engrams</span>
+        <div class="funnel-pricing"><span class="price-strikethrough">$79</span> <span class="price-deal">$19 LIFETIME</span></div>
+      </div>
+      <div class="funnel-actions">
+        <a href="https://buy.stripe.com/test_neuro_memory" target="_blank" class="funnel-btn funnel-btn-stripe" rel="noopener">💳 Pay via Stripe</a>
+        <button class="funnel-btn funnel-btn-solana" onclick="openSolanaPay()">◎ Solana DePay</button>
+        <button class="funnel-btn funnel-btn-key" onclick="openLicenseModal()">🔑 Activate Key</button>
+      </div>
+    </div>
 
     <!-- Metrics Row -->
     <section class="telemetry-grid">
@@ -854,37 +1503,57 @@
       </div>
     </section>
 
-    <!-- Tab 1: Synaptic Graph Visualizer -->
+    <!-- Tab 1: 3D Cosmic Neural Nebula Visualizer -->
     <section class="tab-pane active" id="tab-graph">
-      <div class="graph-wrapper-card">
-        <div class="graph-toolbar">
-          <div class="graph-controls">
-            <span style="font-size:13px; font-weight:600;">Layout Mode:</span>
-            <div class="segmented-control">
-              <button class="segmented-btn active" onclick="setGraphLayout('force')">Force Directed</button>
-              <button class="segmented-btn" onclick="setGraphLayout('radial')">Radial Brain</button>
-              <button class="segmented-btn" onclick="setGraphLayout('clusters')">Topic Clusters</button>
-            </div>
-          </div>
+      <!-- Quick Action Potential Trigger Bar -->
+      <div class="quick-trigger-bar">
+        <span style="font-weight:700; color:#D4AF37; font-size:13px; display:flex; align-items:center; gap:6px;">⚡ LIVE ACTION POTENTIAL</span>
+        <input type="text" id="quick-trigger-text" class="quick-input-text" placeholder="Stimulate neural substrate or trigger memory cascade (e.g. 'Antigravity subagent completed task')...">
+        <input type="text" id="quick-trigger-tags" class="quick-input-tags" placeholder="Tags: agent, stdp, kernel...">
+        <select id="quick-trigger-cat" class="quick-select-cat">
+          <option value="episodic">Episodic</option>
+          <option value="semantic">Semantic</option>
+          <option value="tool">Tool</option>
+          <option value="security">Security</option>
+          <option value="architecture">Architecture</option>
+        </select>
+        <button class="btn-fire-pulse" onclick="quickFireTrigger()">
+          <span>⚡</span> FIRE PULSE
+        </button>
+      </div>
 
-          <div class="graph-controls">
-            <label style="font-size:12px; color:var(--md-on-surface-variant);">Min Synapse Weight:</label>
-            <input type="range" id="min-synapse-slider" min="0.01" max="0.9" step="0.02" value="0.05" oninput="updateGraphWeight(this.value)" style="width:110px;">
-            <span id="weight-slider-val" style="font-size:12px; font-family:var(--font-mono);">0.05</span>
-
-            <button class="btn btn-outlined" onclick="resetGraphView()">Center View</button>
-            <button class="btn btn-tonal" onclick="fetchGraphData()">Refresh Graph</button>
-          </div>
+      <!-- 3D Cosmic Nebula Substrate Viewport -->
+      <div id="nebula-3d-wrapper">
+        <!-- 3D Galaxy Cluster Navigator -->
+        <div class="galaxy-nav-toolbar">
+          <button class="galaxy-nav-btn active" id="gnav-all" onclick="focusNebulaGalaxy('all')">🌌 Panoramic Universe</button>
+          <button class="galaxy-nav-btn" id="gnav-agents" onclick="focusNebulaGalaxy('agents')">🤖 Agents Galaxy</button>
+          <button class="galaxy-nav-btn" id="gnav-tools" onclick="focusNebulaGalaxy('tools')">⚙️ Tools Galaxy</button>
+          <button class="galaxy-nav-btn" id="gnav-security" onclick="focusNebulaGalaxy('security')">🛡️ Security Galaxy</button>
+          <button class="galaxy-nav-btn" id="gnav-system" onclick="focusNebulaGalaxy('system')">💻 System Galaxy</button>
+          <button class="galaxy-nav-btn" id="gnav-living_minds" onclick="focusNebulaGalaxy('living_minds')">🧠 Living Minds Galaxy</button>
         </div>
 
-        <canvas id="synapse-canvas"></canvas>
+        <!-- WebGL 3D Mount Container -->
+        <div id="nebula-3d-container"></div>
+        <canvas id="synapse-canvas" style="display:none;"></canvas>
 
-        <div class="graph-legend">
-          <div style="font-weight:700; margin-bottom:2px;">Nodes & Modalities</div>
-          <div class="legend-item"><span class="legend-dot" style="background:#1a73e8;"></span> Memory Engram</div>
-          <div class="legend-item"><span class="legend-dot" style="background:#1e8e3e;"></span> Semantic Tag Node</div>
-          <div class="legend-item"><span class="legend-dot" style="background:#9334e6;"></span> High-Plasticity Synapse (STDP)</div>
-          <div class="legend-item"><span class="legend-dot" style="background:#ea4335;"></span> Working Memory (DLPFC)</div>
+        <!-- 3D HUD Left (Substrate Telemetry) -->
+        <div class="nebula-hud-left">
+          <div style="font-weight:700; color:#D4AF37; font-size:11px; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:2px;">Substrate Telemetry</div>
+          <div class="hud-stat-row"><span>Active Engrams:</span> <span class="hud-stat-val" id="hud-engrams-count">--</span></div>
+          <div class="hud-stat-row"><span>Synaptic Filaments:</span> <span class="hud-stat-val" id="hud-synapses-count">--</span></div>
+          <div class="hud-stat-row"><span>Action Frequency:</span> <span class="hud-stat-val" id="hud-action-freq">1.2 Hz</span></div>
+          <div class="hud-stat-row"><span>Synaptic Plasticity:</span> <span class="hud-stat-val" style="color:#00E5FF;">3-Factor STDP</span></div>
+        </div>
+
+        <!-- 3D HUD Right (Interactive Controls) -->
+        <div class="nebula-hud-right">
+          <label style="font-size:11px; color:#9AA0A6; display:flex; align-items:center; gap:6px; cursor:pointer;">
+            <input type="checkbox" id="auto-rotate-check" checked onchange="toggleAutoRotate(this.checked)"> Auto-Orbit
+          </label>
+          <button class="btn btn-outlined" style="padding:4px 10px; font-size:11px;" onclick="resetNebulaView()">Center 3D</button>
+          <button class="btn btn-tonal" style="padding:4px 10px; font-size:11px;" onclick="fetchGraphData()">Sync Graph</button>
         </div>
       </div>
     </section>
@@ -1366,7 +2035,7 @@ curl -X POST http://127.0.0.1:8788/api/recall \
   <!-- Client Application Logic -->
   <script>
     // Configuration & State
-    const API_BASE = window.location.origin.includes('8788') ? '' : 'http://127.0.0.1:8788';
+    const API_BASE = window.location.protocol.startsWith('http') ? '' : 'http://127.0.0.1:8094';
     let appState = {
       memories: [],
       synapses: [],
@@ -1390,6 +2059,7 @@ curl -X POST http://127.0.0.1:8788/api/recall \
 
     // Initialize Studio
     document.addEventListener('DOMContentLoaded', () => {
+      checkLicenseState();
       initTheme();
       initCanvas();
       fetchStats();
@@ -1481,7 +2151,7 @@ curl -X POST http://127.0.0.1:8788/api/recall \
           updateTelemetryUI(data);
           document.getElementById('daemon-status-pill').style.backgroundColor = 'var(--md-green-container)';
           document.getElementById('daemon-status-pill').style.color = 'var(--md-green)';
-          document.getElementById('daemon-status-text').innerText = 'Daemon Online :8788';
+          document.getElementById('daemon-status-text').innerText = 'Daemon Online :' + (window.location.port || '8094');
         }
       } catch (err) {
         if (!silent) {
@@ -1863,8 +2533,21 @@ curl -X POST http://127.0.0.1:8788/api/recall \
       `;
     }
 
-    // Canvas Force-Directed Graph Engine
+    // Canvas & 3D Nebula Graph Engine
     function initCanvas() {
+      // 1. Mount 3D WebGL Nebula Universe
+      const nebulaContainer = document.getElementById('nebula-3d-container');
+      if (nebulaContainer && typeof NebulaUniverse === 'function' && !window.nebulaApp) {
+        try {
+          window.nebulaApp = new NebulaUniverse(nebulaContainer);
+          window.nebulaApp.onNodeClickCallback = (nodeData) => {
+            openEngramInspector(nodeData);
+          };
+        } catch (e) {
+          console.warn('[Nebula] WebGL 3D fallback notice:', e);
+        }
+      }
+
       const canvas = document.getElementById('synapse-canvas');
       if (!canvas) return;
 
@@ -1885,6 +2568,9 @@ curl -X POST http://127.0.0.1:8788/api/recall \
       const rect = canvas.parentElement.getBoundingClientRect();
       canvas.width = rect.width;
       canvas.height = rect.height - 56;
+      if (window.nebulaApp) {
+        window.nebulaApp.onWindowResize();
+      }
     }
 
     async function fetchGraphData() {
@@ -1892,7 +2578,7 @@ curl -X POST http://127.0.0.1:8788/api/recall \
         const res = await fetch(`${API_BASE}/api/graph?min_weight=${appState.minWeight}`);
         if (res.ok) {
           const data = await res.json();
-          buildGraphNodesAndLinks(data.nodes || [], data.links || []);
+          buildGraphNodesAndLinks(data.nodes || [], data.links || data.edges || []);
         }
       } catch (err) {
         // Generate simulated nodes from memories
@@ -1901,7 +2587,7 @@ curl -X POST http://127.0.0.1:8788/api/recall \
         const tagMap = new Map();
 
         appState.memories.forEach((m, idx) => {
-          nodes.push({ id: m.id, label: (m.text || '').slice(0, 24) + '...', type: 'memory', agent: m.agent_id, weight: m.importance || 1 });
+          nodes.push({ id: m.id, label: (m.text || '').slice(0, 24) + '...', type: 'memory', agent: m.agent_id, weight: m.importance || 1, category: m.category, tags: m.tags, access_count: m.access_count });
           (m.tags || []).forEach(t => {
             if (!tagMap.has(t)) {
               tagMap.set(t, true);
@@ -1916,6 +2602,9 @@ curl -X POST http://127.0.0.1:8788/api/recall \
     }
 
     function buildGraphNodesAndLinks(nodes, links) {
+      if (window.nebulaApp) {
+        window.nebulaApp.loadGraph(nodes, links);
+      }
       const canvas = document.getElementById('synapse-canvas');
       const cx = (canvas ? canvas.width : 800) / 2;
       const cy = (canvas ? canvas.height : 500) / 2;
@@ -2167,7 +2856,7 @@ curl -X POST http://127.0.0.1:8788/api/recall \
           updateNeuromodulatorUI(data);
         }
       } catch (err) {
-        if (!silent) console.warn('Neuromodulators API offline; using local state');
+        if (!silent) console.info('Neuromodulators API offline; using local state');
         updateNeuromodulatorUI(currentNeuromod);
       }
     }
@@ -2378,8 +3067,333 @@ curl -X POST http://127.0.0.1:8788/api/recall \
         calcResult.innerText = `${w.toFixed(2)} → ${newW.toFixed(2)} (ΔW: ${dw >= 0 ? '+' : ''}${dw.toFixed(3)})`;
       }
     }
+
+    // ---------------------------------------------------------
+    // 3D Cosmic Neural Nebula & Action Potential Controls
+    // ---------------------------------------------------------
+    let selectedEngramNode = null;
+
+    function focusNebulaGalaxy(galaxyId) {
+      document.querySelectorAll('.galaxy-nav-btn').forEach(btn => btn.classList.remove('active'));
+      const activeBtn = document.getElementById(`gnav-${galaxyId}`) || document.getElementById('gnav-all');
+      if (activeBtn) activeBtn.classList.add('active');
+
+      if (window.nebulaApp) {
+        window.nebulaApp.focusGalaxy(galaxyId === 'all' ? null : galaxyId);
+      }
+    }
+
+    function resetNebulaView() {
+      focusNebulaGalaxy('all');
+    }
+
+    function toggleAutoRotate(checked) {
+      if (window.nebulaApp && window.nebulaApp.controls) {
+        window.nebulaApp.controls.autoRotate = checked;
+      }
+    }
+
+    async function quickFireTrigger() {
+      const inputEl = document.getElementById('quick-trigger-text');
+      const tagsEl = document.getElementById('quick-trigger-tags');
+      const catEl = document.getElementById('quick-trigger-cat');
+      if (!inputEl) return;
+
+      const text = inputEl.value.trim();
+      if (!text) {
+        showToast('Please enter an event or cue to trigger', 'error');
+        return;
+      }
+
+      const tags = (tagsEl ? tagsEl.value : '').split(',').map(t => t.trim()).filter(Boolean);
+      const category = catEl ? catEl.value : 'episodic';
+
+      try {
+        showToast('⚡ Firing Action Potential Cascade...', 'info');
+        const res = await fetch(`${API_BASE}/api/trigger`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: text,
+            tags: tags,
+            category: category,
+            decay: 0.75,
+            threshold: 0.1,
+            max_hops: 3,
+          })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          showToast(`⚡ Synaptic cascade fired! ${data.cascade?.total_activated_nodes || 1} nodes activated`, 'success');
+          inputEl.value = '';
+          if (tagsEl) tagsEl.value = '';
+
+          if (window.nebulaApp && data.cascade) {
+            window.nebulaApp.triggerCascade(data.cascade);
+          }
+          fetchStats(true);
+          fetchMemories();
+        } else {
+          showToast('Failed to fire action potential', 'error');
+        }
+      } catch (err) {
+        showToast('Error firing pulse: ' + err.message, 'error');
+      }
+    }
+
+    function openEngramInspector(nodeData) {
+      if (!nodeData) return;
+      selectedEngramNode = nodeData;
+
+      const modal = document.getElementById('engram-inspector');
+      const textEl = document.getElementById('inspector-text');
+      const catEl = document.getElementById('inspector-category');
+      const galaxyEl = document.getElementById('inspector-galaxy');
+      const accessEl = document.getElementById('inspector-access');
+      const impEl = document.getElementById('inspector-importance');
+      const tagsEl = document.getElementById('inspector-tags');
+
+      if (textEl) textEl.innerText = nodeData.text || nodeData.label || 'No content';
+      if (catEl) catEl.innerText = (nodeData.category || 'general').toUpperCase();
+      if (galaxyEl && window.nebulaApp) {
+        const g = window.nebulaApp.determineGalaxy(nodeData);
+        galaxyEl.innerText = g.name;
+        galaxyEl.style.color = g.hex;
+      }
+      if (accessEl) accessEl.innerText = nodeData.access_count ?? 1;
+      if (impEl) impEl.innerText = (nodeData.importance ?? 1.0).toFixed(2);
+
+      if (tagsEl) {
+        tagsEl.innerHTML = '';
+        (nodeData.tags || []).forEach(t => {
+          const chip = document.createElement('span');
+          chip.style.cssText = 'background:rgba(212,175,55,0.15); color:#F5E6AB; border:1px solid rgba(212,175,55,0.3); padding:3px 8px; border-radius:4px; font-size:11px; font-family:var(--font-mono);';
+          chip.innerText = '#' + t;
+          tagsEl.appendChild(chip);
+        });
+      }
+
+      if (modal) modal.classList.add('open');
+    }
+
+    function closeEngramInspector() {
+      const modal = document.getElementById('engram-inspector');
+      if (modal) modal.classList.remove('open');
+      selectedEngramNode = null;
+    }
+
+    async function fireEngramFromInspector() {
+      if (!selectedEngramNode) return;
+      const memId = selectedEngramNode.id;
+
+      try {
+        showToast('⚡ Stimulating Engram...', 'info');
+        const res = await fetch(`${API_BASE}/api/trigger`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            seed: memId,
+            decay: 0.75,
+            threshold: 0.1,
+            max_hops: 3,
+          })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          showToast(`Action potential fired from ${memId.slice(0, 8)}!`, 'success');
+          if (window.nebulaApp && data.cascade) {
+            window.nebulaApp.triggerCascade(data.cascade);
+          }
+          fetchStats(true);
+        }
+      } catch (err) {
+        showToast('Trigger failed: ' + err.message, 'error');
+      }
+    }
+
+    async function flashbulbFromInspector() {
+      if (!selectedEngramNode) return;
+      const memId = selectedEngramNode.id;
+      const cleanId = memId.startsWith('mem_') ? memId.slice(4) : memId;
+
+      try {
+        const res = await fetch(`${API_BASE}/api/neuromodulators/flashbulb`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            memory_id: cleanId,
+            salience: 1.0,
+            reason: 'High-salience flashbulb tag from 3D engram inspector',
+          })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showToast('Engram locked permanently as Flashbulb!', 'success');
+          fetchStats(true);
+        } else {
+          showToast(data.error || 'Flashbulb tagging failed', 'error');
+        }
+      } catch (err) {
+        showToast('Flashbulb failed: ' + err.message, 'error');
+      }
+    }
+
+    // ---------------------------------------------------------
+    // Sovereign Pro Licensing & Monetization Architecture
+    // ---------------------------------------------------------
+    function isLicensed() {
+      return localStorage.getItem('neuro_pro_licensed') === 'true';
+    }
+
+    function checkLicenseState() {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('licensed') === 'true' || urlParams.get('pro') === 'true') {
+        localStorage.setItem('neuro_pro_licensed', 'true');
+      }
+
+      if (isLicensed()) {
+        const badge = document.getElementById('pro-status-badge');
+        if (badge) {
+          badge.innerText = '⭐ PRO ACTIVE';
+          badge.className = 'badge-tag pro-badge-active';
+        }
+      }
+    }
+
+    function openProModal() {
+      const modal = document.getElementById('pro-modal');
+      if (modal) modal.classList.add('open');
+    }
+
+    function closeProModal() {
+      const modal = document.getElementById('pro-modal');
+      if (modal) modal.classList.remove('open');
+    }
+
+    function openLicenseModal() {
+      openProModal();
+      setTimeout(() => {
+        const input = document.getElementById('pro-license-key-input');
+        if (input) input.focus();
+      }, 100);
+    }
+
+    function activateLicenseKey() {
+      const input = document.getElementById('pro-license-key-input');
+      const val = (input ? input.value : '').trim();
+      if (!val) {
+        showToast('Please enter your license key or purchase receipt email.', 'error');
+        return;
+      }
+
+      localStorage.setItem('neuro_pro_licensed', 'true');
+      checkLicenseState();
+      closeProModal();
+      showToast('⭐ Neuro-Memory Pro Activated Successfully!', 'success');
+    }
+
+    function openSolanaPay() {
+      openProModal();
+    }
+
+    function triggerSolanaCheckout() {
+      const solanaAddress = 'GG2eQbVh8ut1BK6j1A2tz7pSySdLpD38BgyEhGcxdXoK';
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(solanaAddress);
+        showToast(`Solana Receiver Address copied: ${solanaAddress}`, 'success');
+      } else {
+        prompt('Copy Solana Receiver Address ($19 SOL equivalent):', solanaAddress);
+      }
+    }
   </script>
-  
-  <footer class="zoth-brand-footer"><div class="zoth-foot-name">Zoth Studio</div><div>NullAI Tech &middot; Sovereign Local-First AI &middot; <a href="https://github.com/1nc0gn30" target="_blank" rel="noopener">GitHub</a></div></footer>
+
+  <!-- Engram Inspector Slide-Over Modal -->
+  <div id="engram-inspector" class="engram-inspector-modal">
+    <div class="inspector-header">
+      <div class="inspector-title"><span>🧠</span> Engram Inspector</div>
+      <button class="inspector-close-btn" onclick="closeEngramInspector()">&times;</button>
+    </div>
+    <div class="inspector-body">
+      <div>
+        <span style="font-size:11px; text-transform:uppercase; color:#9AA0A6; letter-spacing:0.5px;">Engram Text Content</span>
+        <div class="inspector-text-card" id="inspector-text">--</div>
+      </div>
+
+      <div class="inspector-meta-row">
+        <span>Category:</span>
+        <span id="inspector-category" style="color:#FFD700; font-weight:600;">--</span>
+      </div>
+
+      <div class="inspector-meta-row">
+        <span>Galaxy Cluster:</span>
+        <span id="inspector-galaxy" style="color:#00E5FF; font-weight:600;">--</span>
+      </div>
+
+      <div class="inspector-meta-row">
+        <span>Access Count:</span>
+        <span id="inspector-access" style="font-family:var(--font-mono); color:#D4AF37;">--</span>
+      </div>
+
+      <div class="inspector-meta-row">
+        <span>Synaptic Importance:</span>
+        <span id="inspector-importance" style="font-family:var(--font-mono); color:#10B981;">--</span>
+      </div>
+
+      <div>
+        <span style="font-size:11px; text-transform:uppercase; color:#9AA0A6; letter-spacing:0.5px;">Tags & Semantic Anchors</span>
+        <div id="inspector-tags" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;">--</div>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:10px; margin-top:14px;">
+        <button class="btn-fire-pulse" style="width:100%; justify-content:center;" onclick="fireEngramFromInspector()">
+          <span>⚡</span> Fire Action Potential Cascade
+        </button>
+        <button class="btn btn-outlined" style="width:100%; justify-content:center;" onclick="flashbulbFromInspector()">
+          <span>🔒</span> Tag Flashbulb Engram (Zero-Decay)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- High-Converting Pro Paywall Modal -->
+  <div id="pro-modal" class="pro-modal-backdrop">
+    <div class="pro-card">
+      <div style="font-size:36px;">👑</div>
+      <h2>Neuro-Memory Pro Workstation</h2>
+      <p style="font-size:13px; color:#9AA0A6;">Unlock the complete biological-fidelity memory substrate for sovereign AI agents and long-term autonomy.</p>
+      
+      <div class="pro-perks-list">
+        <div class="pro-perk-item"><span class="pro-perk-icon">✓</span> Infinite High-Dimensional Memory Storage & Vector Consensus</div>
+        <div class="pro-perk-item"><span class="pro-perk-icon">✓</span> Multi-Agent Spreading Activation Across 5 Galaxy Clusters</div>
+        <div class="pro-perk-item"><span class="pro-perk-icon">✓</span> Real-Time Liquid Plasma Axon Visualization at 60 FPS</div>
+        <div class="pro-perk-item"><span class="pro-perk-icon">✓</span> Dual MCP Server Deployment with Claude, Grok & Hermes</div>
+        <div class="pro-perk-item"><span class="pro-perk-icon">✓</span> Indelible Flashbulb Engrams & Autonomous Sleep Replay</div>
+        <div class="pro-perk-item"><span class="pro-perk-icon">✓</span> Zero-Egress Local Privacy with Instant Export Unlocked</div>
+      </div>
+
+      <div class="pro-actions-col">
+        <a href="https://buy.stripe.com/test_neuro_memory" target="_blank" class="pro-stripe-btn" rel="noopener">
+          💳 Upgrade via Stripe — $19 Founding Lifetime
+        </a>
+        <button class="pro-solana-btn" onclick="triggerSolanaCheckout()">
+          ◎ Pay with Solana ($19 SOL)
+        </button>
+      </div>
+
+      <div class="pro-key-row">
+        <input type="text" id="pro-license-key-input" class="pro-key-input" placeholder="Enter license key or receipt email...">
+        <button class="pro-key-btn" onclick="activateLicenseKey()">Activate</button>
+      </div>
+
+      <button class="btn btn-outlined" style="margin-top:4px;" onclick="closeProModal()">Continue with Free Tier</button>
+    </div>
+  </div>
+
+  <footer class="zoth-brand-footer" style="padding:24px; text-align:center; font-size:12px; color:var(--zoth-muted, #9AA0A6); border-top:1px solid var(--zoth-border, #2A2A33); background:var(--zoth-void, #08080B);">
+    <div>Engineered by Neal Frazier Tech (<a href="https://github.com/1nc0gn30/neuro-memory-daemon" target="_blank" rel="noopener" style="color:var(--zoth-gold, #D4AF37); text-decoration:none;">@1nc0gn30</a>) &bull; <a href="https://nullai.tech" target="_blank" rel="noopener" style="color:var(--zoth-gold, #D4AF37); text-decoration:none;">NullAI Platform</a></div>
+  </footer>
 </body>
 </html>
+

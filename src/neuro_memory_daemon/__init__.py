@@ -54,6 +54,8 @@ __all__ = [
     "tag_flashbulb",
     "neuromodulate_pulse",
     "get_neuromodulators",
+    "trigger_memory",
+    "simulate_spreading_activation",
 ]
 
 # Optional re-exports from core sleep_replay, metacognition, and neuromodulation
@@ -456,6 +458,149 @@ class MemoryDaemon:
     def recall_memory(self, *args, **kwargs) -> List[Dict[str, Any]]:
         """Alias for recall()."""
         return self.recall(*args, **kwargs)
+
+    def simulate_spreading_activation(
+        self,
+        seed: str,
+        decay: float = 0.75,
+        threshold: float = 0.1,
+        max_hops: int = 3,
+        auto_reinforce: bool = True,
+    ) -> Dict[str, Any]:
+        """Simulate biological spreading activation across memory nodes and synaptic links.
+
+        Traverses node synapses starting from seed node ID or matching tag/query.
+        """
+        raw_seed = str(seed).strip()
+        with self._lock:
+            start_nodes: List[Tuple[str, float]] = []
+
+            # 1. Exact node ID match
+            if raw_seed in self.nodes:
+                start_nodes.append((raw_seed, 1.0))
+            else:
+                # 2. Match by tag or content
+                seed_lower = raw_seed.lower().lstrip("#")
+                for nid, node in self.nodes.items():
+                    if any(t.lower() == seed_lower for t in node.tags):
+                        start_nodes.append((nid, 0.95))
+                if not start_nodes:
+                    # Semantic search match
+                    query_vec = _compute_bow_vector(raw_seed)
+                    if query_vec:
+                        for nid, node in self.nodes.items():
+                            sim = _cosine_similarity(query_vec, node.embedding)
+                            if sim >= 0.2:
+                                start_nodes.append((nid, sim))
+
+            activated_nodes: Dict[str, Dict[str, Any]] = {}
+            activated_edges: List[Dict[str, Any]] = []
+            cascade_sequence: List[Dict[str, Any]] = []
+            seen_edges: Set[Tuple[str, str]] = set()
+
+            frontier: List[Tuple[str, float, int]] = []
+            for nid, act in start_nodes:
+                node = self.nodes.get(nid)
+                if node:
+                    activated_nodes[nid] = {
+                        "id": nid,
+                        "label": node.text[:50],
+                        "category": node.category,
+                        "tags": node.tags,
+                        "agent_id": node.agent_id,
+                        "activation": round(act, 4),
+                        "hop": 0,
+                    }
+                    frontier.append((nid, act, 0))
+
+            while frontier:
+                curr_id, curr_act, hop = frontier.pop(0)
+                if hop >= max_hops:
+                    continue
+
+                curr_node = self.nodes.get(curr_id)
+                if not curr_node:
+                    continue
+
+                for target_id, weight in curr_node.synapses.items():
+                    if target_id not in self.nodes or target_id == curr_id:
+                        continue
+
+                    transmitted_energy = curr_act * weight * decay
+                    if transmitted_energy >= threshold:
+                        edge_pair = (min(curr_id, target_id), max(curr_id, target_id))
+                        if edge_pair not in seen_edges:
+                            seen_edges.add(edge_pair)
+                            activated_edges.append({
+                                "source": curr_id,
+                                "target": target_id,
+                                "weight": round(weight, 4),
+                                "pulse_intensity": round(min(1.0, transmitted_energy * 1.5), 4),
+                                "hop": hop + 1,
+                            })
+
+                        cascade_sequence.append({
+                            "hop": hop + 1,
+                            "source": curr_id,
+                            "target": target_id,
+                            "energy": round(transmitted_energy, 4),
+                            "weight": round(weight, 4),
+                        })
+
+                        if target_id not in activated_nodes or transmitted_energy > activated_nodes[target_id]["activation"]:
+                            t_node = self.nodes[target_id]
+                            activated_nodes[target_id] = {
+                                "id": target_id,
+                                "label": t_node.text[:50],
+                                "category": t_node.category,
+                                "tags": t_node.tags,
+                                "agent_id": t_node.agent_id,
+                                "activation": round(transmitted_energy, 4),
+                                "hop": hop + 1,
+                            }
+                            frontier.append((target_id, transmitted_energy, hop + 1))
+
+                        if auto_reinforce:
+                            curr_node.synapses[target_id] = round(min(1.0, weight + 0.03), 4)
+
+            if auto_reinforce and cascade_sequence:
+                self._save()
+
+            return {
+                "seed": raw_seed,
+                "max_hops": max_hops,
+                "decay": decay,
+                "threshold": threshold,
+                "activated_nodes": list(activated_nodes.values()),
+                "activated_edges": activated_edges,
+                "cascade_sequence": cascade_sequence,
+                "total_activated_nodes": len(activated_nodes),
+                "total_activated_edges": len(activated_edges),
+                "timestamp": time.time(),
+            }
+
+    def trigger(
+        self,
+        seed_or_id: str,
+        decay: float = 0.75,
+        threshold: float = 0.1,
+        max_hops: int = 3,
+    ) -> Dict[str, Any]:
+        """Trigger an action potential cascade from a seed memory or cue."""
+        raw_seed = str(seed_or_id).strip()
+        with self._lock:
+            if raw_seed in self.nodes:
+                self.nodes[raw_seed].access_count += 1
+                self.nodes[raw_seed].last_accessed_at = time.time()
+                self._save()
+        return self.simulate_spreading_activation(
+            seed=raw_seed,
+            decay=decay,
+            threshold=threshold,
+            max_hops=max_hops,
+            auto_reinforce=True,
+        )
+
 
     # -----------------------------------------------------------------------
     # Public API: Search (Full-Text & Tag Filtering)
@@ -1014,3 +1159,25 @@ def get_neuromodulators(db_path: Optional[Union[str, Path]] = None) -> Dict[str,
     """Retrieve neuromodulator levels and Yerkes-Dodson state using the default daemon."""
     daemon = get_default_daemon(db_path)
     return daemon.get_neuromodulators()
+
+def trigger_memory(
+    seed_or_id: str,
+    decay: float = 0.75,
+    threshold: float = 0.1,
+    max_hops: int = 3,
+    db_path: Optional[Union[str, Path]] = None,
+) -> Dict[str, Any]:
+    """Trigger an action potential cascade from a seed memory or cue using the default daemon."""
+    daemon = get_default_daemon(db_path)
+    return daemon.trigger(seed_or_id=seed_or_id, decay=decay, threshold=threshold, max_hops=max_hops)
+
+def simulate_spreading_activation(
+    seed: str,
+    decay: float = 0.75,
+    threshold: float = 0.1,
+    max_hops: int = 3,
+    db_path: Optional[Union[str, Path]] = None,
+) -> Dict[str, Any]:
+    """Simulate spreading activation across synapses using the default daemon."""
+    daemon = get_default_daemon(db_path)
+    return daemon.simulate_spreading_activation(seed=seed, decay=decay, threshold=threshold, max_hops=max_hops)

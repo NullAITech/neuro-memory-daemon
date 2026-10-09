@@ -32,24 +32,11 @@ if (isWeb) {
 } else if (isAppRequest) {
   console.log('⚡ Launching Neuro-Memory Studio Desktop Workstation...');
   
-  // Find Electron in local node_modules, sibling micro-repos, or system PATH
+  // Find Electron in local node_modules, system paths, or PATH
   const candidateElectronPaths = [
     path.join(rootDir, 'node_modules', '.bin', 'electron'),
-    '/media/neo/f2fdda77-178b-4603-ae80-c7aa4cd97908/zoth-micro-repos/NullAI-HexStrike-AI-Terminal/node_modules/.bin/electron',
-    '/media/neo/f2fdda77-178b-4603-ae80-c7aa4cd97908/zoth-micro-repos/promptmaster-studio/node_modules/.bin/electron',
-    '/media/neo/f2fdda77-178b-4603-ae80-c7aa4cd97908/zoth-micro-repos/jwt-inspector-guard/node_modules/.bin/electron',
-    '/media/neo/f2fdda77-178b-4603-ae80-c7aa4cd97908/zoth-micro-repos/envguard-secrets-vault/node_modules/.bin/electron',
-    '/media/neo/f2fdda77-178b-4603-ae80-c7aa4cd97908/zoth-micro-repos/cron-rhythm-studio/node_modules/.bin/electron',
-    '/media/neo/f2fdda77-178b-4603-ae80-c7aa4cd97908/regex-droid-builder/node_modules/.bin/electron',
-    '/media/neo/f2fdda77-178b-4603-ae80-c7aa4cd97908/schema-illustrator-studio/node_modules/.bin/electron',
-    '/media/neo/f2fdda77-178b-4603-ae80-c7aa4cd97908/zoth-micro-repos/payload-entropy-studio/node_modules/.bin/electron',
-    '/media/neo/f2fdda77-178b-4603-ae80-c7aa4cd97908/zoth-micro-repos/audiocipher-stego-engine/node_modules/.bin/electron',
-    '/media/neo/f2fdda77-178b-4603-ae80-c7aa4cd97908/pwa-manifest-builder/node_modules/.bin/electron',
-    '/media/neo/f2fdda77-178b-4603-ae80-c7aa4cd97908/certpath-roadmap-studio/node_modules/.bin/electron',
-    '/media/neo/f2fdda77-178b-4603-ae80-c7aa4cd97908/subsweep-lead-scanner/node_modules/.bin/electron',
-    '/media/neo/f2fdda77-178b-4603-ae80-c7aa4cd97908/web-security-guard/node_modules/.bin/electron',
-    '/media/neo/f2fdda77-178b-4603-ae80-c7aa4cd97908/cwv-speed-engine/node_modules/.bin/electron',
-    '/media/neo/f2fdda77-178b-4603-ae80-c7aa4cd97908/vector-search-engine/node_modules/.bin/electron',
+    '/usr/local/bin/electron',
+    '/usr/bin/electron',
   ];
 
   let electronCmd = 'electron';
