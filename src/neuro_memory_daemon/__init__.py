@@ -262,7 +262,7 @@ class MemoryDaemon:
                     "nodes": {node_id: node.to_dict() for node_id, node in self.nodes.items()}
                 }
                 with open(temp_path, "w", encoding="utf-8") as f:
-                    json.dump(data, f, indent=2)
+                    json.dump(data, f, separators=(",", ":"))
                 temp_path.replace(self.db_path)
             except Exception as e:
                 sys.stderr.write(f"[neuro-memory-daemon] Error saving {self.db_path}: {e}\n")
@@ -563,9 +563,6 @@ class MemoryDaemon:
                         if auto_reinforce:
                             curr_node.synapses[target_id] = round(min(1.0, weight + 0.03), 4)
 
-            if auto_reinforce and cascade_sequence:
-                self._save()
-
             return {
                 "seed": raw_seed,
                 "max_hops": max_hops,
@@ -592,7 +589,6 @@ class MemoryDaemon:
             if raw_seed in self.nodes:
                 self.nodes[raw_seed].access_count += 1
                 self.nodes[raw_seed].last_accessed_at = time.time()
-                self._save()
         return self.simulate_spreading_activation(
             seed=raw_seed,
             decay=decay,
