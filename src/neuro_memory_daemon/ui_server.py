@@ -202,18 +202,18 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
                 self._send_json({"memories": results, "total": len(results)})
                 return
 
-            # Return list of all nodes
-            nodes = [n.to_dict() for n in daemon.nodes.values()]
+            # Return list of nodes with slice-before-serialize optimization
+            raw_nodes = list(daemon.nodes.values())
             if cat:
-                nodes = [n for n in nodes if n.get("category") == cat]
+                raw_nodes = [n for n in raw_nodes if getattr(n, "category", "") == cat]
             if agent_id:
-                nodes = [n for n in nodes if n.get("agent_id") == agent_id]
+                raw_nodes = [n for n in raw_nodes if getattr(n, "agent_id", "") == agent_id]
             if tag:
                 tag_clean = tag.lower().lstrip("#")
-                nodes = [n for n in nodes if tag_clean in [t.lower() for t in n.get("tags", [])]]
+                raw_nodes = [n for n in raw_nodes if tag_clean in [t.lower() for t in getattr(n, "tags", [])]]
 
-            nodes.sort(key=lambda x: x.get("created_at", 0), reverse=True)
-            nodes = nodes[:limit]
+            raw_nodes.sort(key=lambda x: getattr(x, "created_at", 0), reverse=True)
+            nodes = [n.to_dict() for n in raw_nodes[:limit]]
             self._send_json({"memories": nodes, "total": len(daemon.nodes)})
             return
 
