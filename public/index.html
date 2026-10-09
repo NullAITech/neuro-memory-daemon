@@ -1186,6 +1186,54 @@
       gap: 10px;
     }
 
+    /* 3D Floating Engram Tooltip */
+    .nebula-hover-tooltip {
+      position: absolute;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+      background: rgba(11, 11, 18, 0.94);
+      border: 1px solid rgba(212, 175, 55, 0.45);
+      border-radius: var(--radius-md);
+      padding: 8px 12px;
+      font-size: 11px;
+      color: #EDEFF2;
+      backdrop-filter: blur(12px);
+      z-index: 60;
+      max-width: 260px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7);
+    }
+    .nebula-hover-tooltip.visible {
+      opacity: 1;
+    }
+
+    /* 3D Sleep Replay Banner */
+    .nebula-sleep-banner {
+      position: absolute;
+      top: 60px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-20px);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      background: linear-gradient(135deg, rgba(212, 175, 55, 0.22), rgba(11, 11, 18, 0.96));
+      border: 1px solid rgba(212, 175, 55, 0.6);
+      border-radius: var(--radius-lg);
+      padding: 12px 22px;
+      color: #F5E6AB;
+      backdrop-filter: blur(16px);
+      z-index: 70;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 8px 32px rgba(212, 175, 55, 0.25), 0 4px 16px rgba(0,0,0,0.8);
+      max-width: 90%;
+    }
+    .nebula-sleep-banner.visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
     /* Engram Slide-Over / Inspector Modal */
     .engram-inspector-modal {
       position: fixed;
@@ -1538,6 +1586,10 @@
         <div id="nebula-3d-container"></div>
         <canvas id="synapse-canvas" style="display:none;"></canvas>
 
+        <!-- Floating Hover Tooltip & Sleep Replay Banner -->
+        <div id="nebula-hover-tooltip" class="nebula-hover-tooltip"></div>
+        <div id="nebula-sleep-banner" class="nebula-sleep-banner"></div>
+
         <!-- 3D HUD Left (Substrate Telemetry) -->
         <div class="nebula-hud-left">
           <div style="font-weight:700; color:#D4AF37; font-size:11px; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:2px;">Substrate Telemetry</div>
@@ -1552,8 +1604,10 @@
           <label style="font-size:11px; color:#9AA0A6; display:flex; align-items:center; gap:6px; cursor:pointer;">
             <input type="checkbox" id="auto-rotate-check" checked onchange="toggleAutoRotate(this.checked)"> Auto-Orbit
           </label>
+          <button class="btn-icon" id="btn-audio-toggle" style="width:26px; height:26px; font-size:12px;" onclick="toggleNebulaAudio()" title="Toggle Action Potential Audio">🔇</button>
+          <button class="btn btn-primary" style="padding:4px 10px; font-size:11px; background:linear-gradient(135deg, #F3D56A, #B8860B); color:#08080B; font-weight:700;" onclick="triggerVisualSleepReplay()" title="Run Hippocampal Sleep Replay (SWRs)">🌙 Sleep Replay</button>
           <button class="btn btn-outlined" style="padding:4px 10px; font-size:11px;" onclick="resetNebulaView()">Center 3D</button>
-          <button class="btn btn-tonal" style="padding:4px 10px; font-size:11px;" onclick="fetchGraphData()">Sync Graph</button>
+          <button class="btn btn-tonal" style="padding:4px 10px; font-size:11px;" onclick="fetchGraphData()">Sync</button>
         </div>
       </div>
     </section>
@@ -2264,6 +2318,7 @@ curl -X POST http://127.0.0.1:8788/api/recall \
                 ${immutableBadge}
               </span>
               <div style="display:flex; align-items:center; gap:8px;">
+                <button class="btn btn-outlined" style="padding:3px 10px; font-size:11px; color:#F5E6AB;" onclick="spotlightEngramIn3D('${m.id}')">🌌 3D Spotlight</button>
                 <button class="btn btn-outlined" style="padding:3px 10px; font-size:11px;" onclick="triggerRehearsal('${m.id}')">⚡ Rehearse</button>
                 <button class="btn btn-outlined" style="padding:3px 8px; font-size:11px; color:var(--md-red);" onclick="deleteMemory('${m.id}')">🗑️</button>
               </div>
@@ -2476,7 +2531,10 @@ curl -X POST http://127.0.0.1:8788/api/recall \
                 <span>#${idx + 1}</span> @${m.agent_id || 'system'}
                 <span class="chip-accent" style="background:var(--md-green-container); color:var(--md-green); font-weight:700;">${pct}% CA3 Pattern Match</span>
               </span>
-              <button class="btn btn-outlined" style="padding:3px 10px; font-size:11px;" onclick="triggerRehearsal('${m.id}')">⚡ Rehearse Synapse</button>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <button class="btn btn-outlined" style="padding:3px 10px; font-size:11px; color:#F5E6AB;" onclick="spotlightEngramIn3D('${m.id}')">🌌 3D Spotlight</button>
+                <button class="btn btn-outlined" style="padding:3px 10px; font-size:11px;" onclick="triggerRehearsal('${m.id}')">⚡ Rehearse Synapse</button>
+              </div>
             </div>
             <div class="memory-text">${escapeHtml(m.text || '')}</div>
             <div class="chip-cloud">${(m.tags || []).map(t => `<span class="tag-badge">#${t}</span>`).join(' ')}</div>
@@ -2494,19 +2552,26 @@ curl -X POST http://127.0.0.1:8788/api/recall \
           const data = await res.json();
           showToast('Consolidation pass completed!', 'success');
           renderConsolidationReport(data);
+          if (window.nebulaApp) {
+            window.nebulaApp.triggerSleepReplayCascade(data);
+          }
           fetchStats();
           fetchMemories();
           fetchGraphData();
         }
       } catch (err) {
-        renderConsolidationReport({
+        const mockData = {
           status: 'consolidated',
           pruned_memories: 0,
           pruned_synapses: 2,
-          reinforced_synapses: 6,
-          duration_ms: 12.4
-        });
-        showToast('Consolidation pass completed (simulated).', 'success');
+          reinforced_synapses: 8,
+          schemata_synthesized: 2
+        };
+        renderConsolidationReport(mockData);
+        if (window.nebulaApp) {
+          window.nebulaApp.triggerSleepReplayCascade(mockData);
+        }
+        showToast('Hippocampal consolidation simulated', 'info');
       }
     }
 
@@ -3174,6 +3239,41 @@ curl -X POST http://127.0.0.1:8788/api/recall \
         });
       }
 
+      // Populate interactive connected synapses list
+      const synListEl = document.getElementById('inspector-synapses-list');
+      if (synListEl && window.nebulaApp) {
+        synListEl.innerHTML = '';
+        const connectedFilaments = window.nebulaApp.filamentCurves.filter(
+          f => f.sourceId === String(nodeData.id) || f.targetId === String(nodeData.id)
+        );
+
+        if (connectedFilaments.length === 0) {
+          synListEl.innerHTML = '<div style="font-size:11px; color:#9AA0A6;">No active synapses connected to this engram.</div>';
+        } else {
+          connectedFilaments.forEach(f => {
+            const otherId = f.sourceId === String(nodeData.id) ? f.targetId : f.sourceId;
+            const otherMesh = window.nebulaApp.nodeMeshes.get(otherId);
+            const otherData = otherMesh ? otherMesh.userData.nodeData : null;
+            const rawLabel = otherData ? (otherData.text || otherData.label || otherId) : otherId;
+            const cleanLabel = rawLabel.length > 36 ? rawLabel.slice(0, 33) + '...' : rawLabel;
+            const weight = typeof f.weight === 'number' ? f.weight : 0.25;
+            const weightColor = weight >= 0.6 ? '#FFD700' : (weight >= 0.3 ? '#00E5FF' : '#4A6CF7');
+
+            const item = document.createElement('div');
+            item.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:8px; background:rgba(8,8,11,0.6); padding:6px 10px; border-radius:6px; border:1px solid #2A2A33; font-size:11px; cursor:pointer; transition:all 0.15s ease;';
+            item.title = 'Click to spotlight in 3D Nebula';
+            item.innerHTML = `
+              <span style="color:#EDEFF2; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">🔗 ${escapeHtml(cleanLabel)}</span>
+              <span style="font-family:var(--font-mono); color:${weightColor}; font-weight:700; flex-shrink:0;">${weight.toFixed(2)}</span>
+            `;
+            item.onmouseover = () => { item.style.borderColor = '#D4AF37'; };
+            item.onmouseout = () => { item.style.borderColor = '#2A2A33'; };
+            item.onclick = () => { spotlightEngramIn3D(otherId); };
+            synListEl.appendChild(item);
+          });
+        }
+      }
+
       if (modal) modal.classList.add('open');
     }
 
@@ -3181,6 +3281,56 @@ curl -X POST http://127.0.0.1:8788/api/recall \
       const modal = document.getElementById('engram-inspector');
       if (modal) modal.classList.remove('open');
       selectedEngramNode = null;
+      if (window.nebulaApp) {
+        window.nebulaApp.clearHighlights();
+      }
+    }
+
+    function spotlightCurrentInspectorNode() {
+      if (!selectedEngramNode) return;
+      spotlightEngramIn3D(selectedEngramNode.id);
+    }
+
+    function spotlightEngramIn3D(id) {
+      switchTab('graph');
+      if (window.nebulaApp) {
+        window.nebulaApp.focusNode(id);
+        const mesh = window.nebulaApp.nodeMeshes.get(String(id));
+        if (mesh) {
+          openEngramInspector(mesh.userData.nodeData);
+        }
+      }
+    }
+
+    function toggleNebulaAudio() {
+      if (window.nebulaApp && window.nebulaApp.audio) {
+        const isEnabled = window.nebulaApp.audio.toggle();
+        const btn = document.getElementById('btn-audio-toggle');
+        if (btn) btn.innerText = isEnabled ? '🔊' : '🔇';
+        showToast(isEnabled ? 'Synaptic bio-audio enabled (528Hz)' : 'Synaptic bio-audio muted', 'info');
+      }
+    }
+
+    async function triggerVisualSleepReplay() {
+      showToast('🌙 Initiating Hippocampal Sleep Replay (SWRs)...', 'info');
+      try {
+        const res = await fetch(`${API_BASE}/api/consolidate`, { method: 'POST' });
+        let data = {};
+        if (res.ok) {
+          data = await res.json();
+        }
+        if (window.nebulaApp) {
+          window.nebulaApp.triggerSleepReplayCascade(data);
+        }
+        showToast('Hippocampal consolidation pass completed!', 'success');
+        renderConsolidationReport(data);
+        fetchStats(true);
+      } catch (err) {
+        if (window.nebulaApp) {
+          window.nebulaApp.triggerSleepReplayCascade({ reinforced_synapses: 8, schemata_synthesized: 2, pruned_count: 0 });
+        }
+        showToast('Hippocampal consolidation simulated', 'info');
+      }
     }
 
     async function fireEngramFromInspector() {
@@ -3346,9 +3496,19 @@ curl -X POST http://127.0.0.1:8788/api/recall \
         <div id="inspector-tags" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;">--</div>
       </div>
 
+      <div>
+        <span style="font-size:11px; text-transform:uppercase; color:#9AA0A6; letter-spacing:0.5px;">Synaptic Connections</span>
+        <div id="inspector-synapses-list" style="display:flex; flex-direction:column; gap:6px; margin-top:6px; max-height:130px; overflow-y:auto; padding-right:4px;">
+          <div style="font-size:11px; color:#9AA0A6;">No active synapses</div>
+        </div>
+      </div>
+
       <div style="display:flex; flex-direction:column; gap:10px; margin-top:14px;">
         <button class="btn-fire-pulse" style="width:100%; justify-content:center;" onclick="fireEngramFromInspector()">
           <span>⚡</span> Fire Action Potential Cascade
+        </button>
+        <button class="btn btn-tonal" style="width:100%; justify-content:center; background:rgba(0,229,255,0.15); color:#80F0FF; border:1px solid rgba(0,229,255,0.3);" onclick="spotlightCurrentInspectorNode()">
+          <span>🌌</span> Spotlight in 3D Nebula
         </button>
         <button class="btn btn-outlined" style="width:100%; justify-content:center;" onclick="flashbulbFromInspector()">
           <span>🔒</span> Tag Flashbulb Engram (Zero-Decay)

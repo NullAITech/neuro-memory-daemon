@@ -119,6 +119,78 @@
     return sprite;
   }
 
+  // Pure Web Audio API Synthesizer for Bio-Resonant Synaptic Feedback (Zero Files/CDNs)
+  class BioAudioSynthesizer {
+    constructor() {
+      this.ctx = null;
+      this.enabled = false;
+    }
+
+    ensureContext() {
+      if (!this.ctx && typeof (window.AudioContext || window.webkitAudioContext) !== 'undefined') {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        this.ctx = new AudioCtx();
+      }
+      if (this.ctx && this.ctx.state === 'suspended') {
+        this.ctx.resume().catch(() => {});
+      }
+    }
+
+    playActionPotential(freq = 528) {
+      if (!this.enabled) return;
+      try {
+        this.ensureContext();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq * 0.85, now);
+        osc.frequency.exponentialRampToValueAtTime(freq * 1.3, now + 0.08);
+
+        gain.gain.setValueAtTime(0.06, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.16);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.18);
+      } catch (e) {}
+    }
+
+    playSleepRipple() {
+      if (!this.enabled) return;
+      try {
+        this.ensureContext();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        [432, 528, 648].forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.1);
+
+          gain.gain.setValueAtTime(0.035, now + idx * 0.1);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.1 + 0.8);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          osc.start(now + idx * 0.1);
+          osc.stop(now + idx * 0.1 + 0.85);
+        });
+      } catch (e) {}
+    }
+
+    toggle() {
+      this.enabled = !this.enabled;
+      if (this.enabled) this.ensureContext();
+      return this.enabled;
+    }
+  }
+
   class NebulaUniverse {
     constructor(containerElement) {
       this.container = containerElement;
@@ -128,6 +200,10 @@
       this.controls = null;
       this.raycaster = new THREE.Raycaster();
       this.mouse = new THREE.Vector2();
+
+      this.audio = new BioAudioSynthesizer();
+      this.pointerDownPos = { x: 0, y: 0 };
+      this.pointerDownTime = 0;
 
       this.stardustPoints = null;
       this.stardustPositions = null;
@@ -226,7 +302,19 @@
       // 7. Event Listeners
       window.addEventListener('resize', () => this.onWindowResize());
       this.renderer.domElement.addEventListener('mousemove', (e) => this.onMouseMove(e));
-      this.renderer.domElement.addEventListener('click', (e) => this.onClick(e));
+      this.renderer.domElement.addEventListener('pointerdown', (e) => {
+        this.pointerDownPos = { x: e.clientX, y: e.clientY };
+        this.pointerDownTime = performance.now();
+      });
+      this.renderer.domElement.addEventListener('pointerup', (e) => {
+        const dx = e.clientX - this.pointerDownPos.x;
+        const dy = e.clientY - this.pointerDownPos.y;
+        const dist = Math.hypot(dx, dy);
+        const elapsed = performance.now() - this.pointerDownTime;
+        if (dist < 8 && elapsed < 500) {
+          this.handleNodeClick(e);
+        }
+      });
 
       // 8. Animation Loop
       this.animate();
@@ -548,9 +636,12 @@
       const seedId = String(cascadeData.seed || '');
       const seedMesh = this.nodeMeshes.get(seedId);
 
+      // Bio-resonant audio feedback
+      if (this.audio) this.audio.playActionPotential(528);
+
       // 1. Shockwave ring at origin seed
       if (seedMesh) {
-        this.fireShockwave(seedMesh.position, 0xFFD700);
+        this.fireShockwave(seedMesh.position, 0xFFD700, 2.2);
         this.flashNode(seedMesh, 0xFFFFFF, 1.8);
       }
 
@@ -590,8 +681,9 @@
       return null;
     }
 
-    fireShockwave(centerPos, color = 0xD4AF37) {
-      const ringGeo = new THREE.RingGeometry(2, 4, 32);
+    // Concentric counter-rotating coronal shockwave rings
+    fireShockwave(centerPos, color = 0xD4AF37, scaleRate = 1.8) {
+      const ringGeo = new THREE.RingGeometry(2, 4.5, 36);
       const ringMat = new THREE.MeshBasicMaterial({
         color: color,
         side: THREE.DoubleSide,
@@ -604,19 +696,39 @@
       ring.rotation.x = Math.PI / 2;
       this.scene.add(ring);
 
+      const ringGeo2 = new THREE.RingGeometry(1.5, 3, 28);
+      const ringMat2 = new THREE.MeshBasicMaterial({
+        color: 0xFFFFFF,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.7,
+        blending: THREE.AdditiveBlending,
+      });
+      const ring2 = new THREE.Mesh(ringGeo2, ringMat2);
+      ring2.position.copy(centerPos);
+      ring2.rotation.x = Math.PI / 2;
+      this.scene.add(ring2);
+
       let scale = 1.0;
       let opacity = 0.9;
       const expandInterval = setInterval(() => {
-        scale += 1.8;
+        scale += scaleRate;
         opacity -= 0.045;
         ring.scale.set(scale, scale, 1);
+        ring2.scale.set(scale * 0.75, scale * 0.75, 1);
+        ring.rotation.z += 0.05;
+        ring2.rotation.z -= 0.05;
         ringMat.opacity = Math.max(0, opacity);
+        ringMat2.opacity = Math.max(0, opacity * 0.75);
 
         if (opacity <= 0) {
           clearInterval(expandInterval);
           this.scene.remove(ring);
+          this.scene.remove(ring2);
           ringGeo.dispose();
           ringMat.dispose();
+          ringGeo2.dispose();
+          ringMat2.dispose();
         }
       }, 16);
     }
@@ -625,11 +737,10 @@
       if (!mesh || mesh.userData.isPulsing) return;
       mesh.userData.isPulsing = true;
 
-      const origMat = mesh.material;
       const baseRadius = mesh.userData.baseRadius;
 
       mesh.material.emissive.setHex(flashColor);
-      mesh.material.emissiveIntensity = 2.0;
+      mesh.material.emissiveIntensity = 2.2;
       mesh.scale.set(baseRadius * scaleMultiplier, baseRadius * scaleMultiplier, baseRadius * scaleMultiplier);
 
       setTimeout(() => {
@@ -640,14 +751,193 @@
       }, 450);
     }
 
+    // Smoothly spotlights and glides camera to an engram node, highlighting its synaptic neighborhood
+    focusNode(nodeId) {
+      const mesh = this.nodeMeshes.get(String(nodeId));
+      if (!mesh) return;
+
+      this.selectedNode = mesh;
+      this.flashNode(mesh, 0xFFD700, 2.0);
+      this.fireShockwave(mesh.position, 0xFFD700, 2.0);
+      if (this.audio) this.audio.playActionPotential(660);
+
+      const targetPos = new THREE.Vector3(
+        mesh.position.x + 35,
+        mesh.position.y + 20,
+        mesh.position.z + 65
+      );
+      this.glideCameraTo(targetPos, mesh.position);
+
+      const connectedIds = new Set();
+      this.filamentCurves.forEach(item => {
+        if (item.sourceId === String(nodeId) || item.targetId === String(nodeId)) {
+          connectedIds.add(item.sourceId === String(nodeId) ? item.targetId : item.sourceId);
+          item.line.material.opacity = 1.0;
+          item.line.material.color.setHex(0xFFD700);
+          this.spawnPlasmaPulse(item.curve, 0.9, 0xFFFFFF, 3.0);
+        } else {
+          item.line.material.opacity = 0.12;
+        }
+      });
+
+      connectedIds.forEach(id => {
+        const neighbor = this.nodeMeshes.get(id);
+        if (neighbor && !neighbor.userData.isPulsing) {
+          neighbor.material.emissiveIntensity = 1.2;
+        }
+      });
+    }
+
+    clearHighlights() {
+      this.filamentCurves.forEach(item => {
+        const weight = item.weight || 0.2;
+        if (weight >= 0.6) {
+          item.line.material.opacity = 0.9;
+          item.line.material.color.setHex(0xFFD700);
+        } else if (weight >= 0.3) {
+          item.line.material.opacity = 0.65;
+          item.line.material.color.setHex(0x00E5FF);
+        } else {
+          item.line.material.opacity = 0.35;
+          item.line.material.color.setHex(0x4A6CF7);
+        }
+      });
+
+      this.nodeMeshes.forEach(mesh => {
+        if (!mesh.userData.isPulsing) {
+          mesh.material.emissiveIntensity = 0.55;
+        }
+      });
+    }
+
+    // Hippocampal Sleep Replay (Sharp-Wave Ripples & Consolidation Simulation)
+    triggerSleepReplayCascade(report = {}) {
+      if (this.audio) this.audio.playSleepRipple();
+
+      // 1. Panoramic overview glide
+      this.glideCameraTo(new THREE.Vector3(0, 220, 580), new THREE.Vector3(0, 0, 0));
+
+      // 2. Sequential Hippocampal Sharp-Wave Ripples (SWRs) expanding radially from core
+      const rippleColors = [0xFFD700, 0xA855F7, 0x00E5FF];
+      rippleColors.forEach((col, idx) => {
+        setTimeout(() => {
+          this.fireShockwave(new THREE.Vector3(0, 0, 0), col, 3.2);
+        }, idx * 260);
+      });
+
+      // 3. Stardust harmonic swirl
+      if (this.stardustPoints && this.stardustPoints.material) {
+        this.stardustPoints.material.opacity = 1.0;
+        setTimeout(() => {
+          this.stardustPoints.material.opacity = 0.75;
+        }, 2800);
+      }
+
+      // 4. Wave of engram rehearsal & consolidation
+      const allMeshes = Array.from(this.nodeMeshes.values());
+      allMeshes.forEach((mesh, idx) => {
+        const delay = 400 + (idx % 8) * 140;
+        setTimeout(() => {
+          this.flashNode(mesh, 0xFFD700, 1.8);
+          this.filamentCurves.filter(f => f.sourceId === String(mesh.userData.nodeData.id)).forEach(f => {
+            this.spawnPlasmaPulse(f.curve, 0.85, 0xFFD700, 2.2);
+          });
+        }, delay);
+      });
+
+      // 5. Pruning dissolution (if low-retention nodes exist)
+      const prunedIds = report.pruned_ids || [];
+      prunedIds.forEach(id => {
+        const mesh = this.nodeMeshes.get(String(id));
+        if (mesh) {
+          this.dissolveNode(mesh);
+        }
+      });
+
+      // 6. Display HUD sleep banner
+      this.showSleepReplayBanner(report);
+    }
+
+    // Dissolve pruned memory engram into fading cosmic dust
+    dissolveNode(mesh) {
+      const pCount = 24;
+      const geo = new THREE.BufferGeometry();
+      const positions = new Float32Array(pCount * 3);
+      const velocities = [];
+
+      for (let i = 0; i < pCount; i++) {
+        positions[i * 3] = mesh.position.x;
+        positions[i * 3 + 1] = mesh.position.y;
+        positions[i * 3 + 2] = mesh.position.z;
+        velocities.push(new THREE.Vector3(
+          (Math.random() - 0.5) * 1.8,
+          (Math.random() - 0.5) * 1.8,
+          (Math.random() - 0.5) * 1.8
+        ));
+      }
+      geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      const mat = new THREE.PointsMaterial({
+        color: 0x9AA0A6,
+        size: 2.5,
+        transparent: true,
+        opacity: 0.8,
+      });
+      const points = new THREE.Points(geo, mat);
+      this.scene.add(points);
+
+      let step = 0;
+      const anim = setInterval(() => {
+        step++;
+        const pos = geo.attributes.position.array;
+        for (let i = 0; i < pCount; i++) {
+          pos[i * 3] += velocities[i].x;
+          pos[i * 3 + 1] += velocities[i].y;
+          pos[i * 3 + 2] += velocities[i].z;
+        }
+        geo.attributes.position.needsUpdate = true;
+        mat.opacity -= 0.04;
+        if (step >= 20 || mat.opacity <= 0) {
+          clearInterval(anim);
+          this.scene.remove(points);
+          geo.dispose();
+          mat.dispose();
+        }
+      }, 30);
+
+      this.scene.remove(mesh);
+      this.nodeMeshes.delete(String(mesh.userData.nodeData.id));
+    }
+
+    showSleepReplayBanner(report) {
+      let banner = document.getElementById('nebula-sleep-banner');
+      if (!banner) return;
+      const reinforced = report.reinforced_synapses ?? report.rehearsed_count ?? report.reinforced ?? 8;
+      const schemata = report.schemata_synthesized ?? 2;
+      const pruned = report.pruned_count ?? 0;
+
+      banner.innerHTML = `
+        <div style="font-size:24px;">🌙</div>
+        <div style="display:flex; flex-direction:column; gap:2px;">
+          <div style="font-weight:700; font-size:12px; color:#FFD700; letter-spacing:0.5px;">HIPPOCAMPAL SLEEP REPLAY COMPLETE</div>
+          <div style="font-size:11px; color:#EDEFF2;">Sharp-Wave Ripples (210 Hz) &bull; ${reinforced} Synapses Reinforced &bull; ${schemata} Schemata Synthesized &bull; ${pruned} Pruned</div>
+        </div>
+      `;
+      banner.classList.add('visible');
+      setTimeout(() => {
+        banner.classList.remove('visible');
+      }, 4800);
+    }
+
     focusGalaxy(galaxyId) {
       const galaxy = GALAXY_CLUSTERS[galaxyId];
       if (!galaxy) {
         // Reset to panoramic cosmic view
+        this.clearHighlights();
         this.glideCameraTo(new THREE.Vector3(0, 180, 520), new THREE.Vector3(0, 0, 0));
         return;
       }
 
+      this.clearHighlights();
       const targetPos = new THREE.Vector3(
         galaxy.center.x + 60,
         galaxy.center.y + 40,
@@ -684,6 +974,8 @@
       const meshes = Array.from(this.nodeMeshes.values());
       const intersects = this.raycaster.intersectObjects(meshes);
 
+      const tooltip = document.getElementById('nebula-hover-tooltip');
+
       if (intersects.length > 0) {
         const hitMesh = intersects[0].object;
         if (this.hoveredNode !== hitMesh) {
@@ -691,12 +983,39 @@
             this.hoveredNode.material.emissiveIntensity = 0.55;
           }
           this.hoveredNode = hitMesh;
-          this.hoveredNode.material.emissiveIntensity = 1.3;
+          this.hoveredNode.material.emissiveIntensity = 1.6;
           this.renderer.domElement.style.cursor = 'pointer';
+        }
 
-          if (typeof this.onNodeHoverCallback === 'function') {
-            this.onNodeHoverCallback(hitMesh.userData.nodeData, event);
-          }
+        if (tooltip) {
+          const data = hitMesh.userData.nodeData;
+          const galaxy = hitMesh.userData.galaxy;
+          const label = data.text || data.label || 'Memory Engram';
+          const cleanLabel = label.length > 55 ? label.slice(0, 52) + '...' : label;
+          const access = data.access_count || 1;
+          const imp = (typeof data.importance === 'number' ? data.importance : 1.0).toFixed(2);
+
+          tooltip.innerHTML = `
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:4px;">
+              <span style="font-weight:700; color:${galaxy.hex}; font-size:10px; text-transform:uppercase;">${galaxy.name}</span>
+              <span style="font-size:10px; color:#9AA0A6;">Access: ${access}</span>
+            </div>
+            <div style="font-weight:500; font-size:12px; color:#EDEFF2; line-height:1.3; margin-bottom:4px;">${cleanLabel}</div>
+            <div style="display:flex; align-items:center; justify-content:space-between; font-size:10px; color:#F5E6AB;">
+              <span>Imp: ${imp}</span>
+              <span style="color:#00E5FF; font-weight:600;">Click to inspect &rarr;</span>
+            </div>
+          `;
+
+          const x = event.clientX - rect.left;
+          const y = event.clientY - rect.top;
+          tooltip.style.left = `${Math.min(x, rect.width - 240)}px`;
+          tooltip.style.top = `${Math.max(20, y - 10)}px`;
+          tooltip.classList.add('visible');
+        }
+
+        if (typeof this.onNodeHoverCallback === 'function') {
+          this.onNodeHoverCallback(hitMesh.userData.nodeData, event);
         }
       } else {
         if (this.hoveredNode && !this.hoveredNode.userData.isPulsing) {
@@ -705,19 +1024,26 @@
         this.hoveredNode = null;
         this.renderer.domElement.style.cursor = 'grab';
 
+        if (tooltip) {
+          tooltip.classList.remove('visible');
+        }
+
         if (typeof this.onNodeHoverCallback === 'function') {
           this.onNodeHoverCallback(null, event);
         }
       }
     }
 
-    onClick(event) {
+    handleNodeClick(event) {
       if (this.hoveredNode) {
-        this.selectedNode = this.hoveredNode;
-        this.flashNode(this.hoveredNode, 0xFFFFFF, 1.5);
+        const nodeData = this.hoveredNode.userData.nodeData;
+        this.focusNode(nodeData.id);
+
         if (typeof this.onNodeClickCallback === 'function') {
-          this.onNodeClickCallback(this.hoveredNode.userData.nodeData);
+          this.onNodeClickCallback(nodeData);
         }
+      } else {
+        this.clearHighlights();
       }
     }
 
