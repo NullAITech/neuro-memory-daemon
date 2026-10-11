@@ -35,6 +35,17 @@ from neuro_memory_daemon.synapse_engine import SynapseEngine
 from neuro_memory_daemon.graph_builder import GraphBuilder
 
 
+def _safe_rel(raw: str) -> str:
+    """Request path -> safe relative path inside a static dir; '' (index) if it
+    tries to climb out with '..' or is absolute. Raw request paths are not normalised."""
+    from urllib.parse import unquote
+    rel = unquote(str(raw or "")).replace("\\", "/").lstrip("/")
+    parts = [p for p in rel.split("/") if p not in ("", ".")]
+    if any(p == ".." for p in parts) or ":" in (parts[0] if parts else ""):
+        return ""
+    return "/".join(parts)
+
+
 class EventBroadcaster:
     """Thread-safe SSE event broadcaster for live agent/tool activity streaming."""
 
@@ -576,7 +587,7 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
 
         # Other static assets in public/
         if pub_dir:
-            clean_rel = req_path.lstrip("/")
+            clean_rel = _safe_rel(req_path)
             target = pub_dir / clean_rel
             if target.exists() and target.is_file():
                 mime_type, _ = mimetypes.guess_type(str(target))
