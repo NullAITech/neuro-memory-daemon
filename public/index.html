@@ -709,6 +709,24 @@
       border-color: var(--md-primary);
       font-weight: 600;
     }
+    .source-count {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.04em;
+      opacity: 0.8;
+    }
+    .memory-text.clamp {
+      display: -webkit-box;
+      -webkit-line-clamp: 6;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .everywhere-path {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--md-on-surface-variant);
+      word-break: break-all;
+    }
 
     /* Memory Cards Stream */
     .stream-feed {
@@ -1463,22 +1481,25 @@
 
   <!-- Navigation Tabs -->
   <nav class="google-nav-tabs">
-    <button class="nav-tab active" onclick="switchTab('graph')">
+    <button class="nav-tab" data-tab="everywhere" onclick="switchTab('everywhere')">
+      Everywhere
+    </button>
+    <button class="nav-tab active" data-tab="graph" onclick="switchTab('graph')">
       <span>🌌</span> 3D Cosmic Neural Nebula
     </button>
-    <button class="nav-tab" onclick="switchTab('stream')">
+    <button class="nav-tab" data-tab="stream" onclick="switchTab('stream')">
       <span>📜</span> Memory Stream & Feed
     </button>
-    <button class="nav-tab" onclick="switchTab('recall')">
+    <button class="nav-tab" data-tab="recall" onclick="switchTab('recall')">
       <span>🔍</span> Associative Recall Playground
     </button>
-    <button class="nav-tab" onclick="switchTab('decay')">
+    <button class="nav-tab" data-tab="decay" onclick="switchTab('decay')">
       <span>🧪</span> Ebbinghaus Decay & Pruning Lab
     </button>
-    <button class="nav-tab" onclick="switchTab('mcp')">
+    <button class="nav-tab" data-tab="mcp" onclick="switchTab('mcp')">
       <span>🔌</span> MCP & AI Agent Hub
     </button>
-    <button class="nav-tab" onclick="switchTab('neuromod')">
+    <button class="nav-tab" data-tab="neuromod" onclick="switchTab('neuromod')">
       <span>⚡</span> Neuromodulation & Flashbulb
     </button>
   </nav>
@@ -1547,6 +1568,40 @@
         <div class="card-footer">
           <span class="chip-accent" style="background:var(--md-yellow-container); color:var(--md-yellow);">Shannon</span>
           <span>Normalized entropy</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 0: Everywhere — federated local memory ledger -->
+    <section class="tab-pane" id="tab-everywhere">
+      <div class="stream-layout">
+        <aside class="sidebar-panel">
+          <div class="panel-title">
+            <span>Every store on this laptop</span>
+            <button class="btn btn-outlined" style="padding:4px 10px; font-size:11px;" onclick="resetEverywhere()">Reset</button>
+          </div>
+          <p style="font-size:13px; color:var(--md-on-surface-variant); line-height:1.5; margin:0;">
+            Read-only ledger of Grok topics, Hermes notes, Zoth Bot memory, AGY soul, and a slice of the Neuro substrate. The Stream tab still holds the full 3D engram feed.
+          </p>
+          <div class="filter-group">
+            <label class="filter-label">Search</label>
+            <input type="text" id="everywhere-search" class="input-field" placeholder="Search across stores…" oninput="debounceEverywhereSearch()">
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">Source</label>
+            <div class="chip-cloud" id="everywhere-source-chips">
+              <span class="filter-chip selected" data-source="" onclick="selectEverywhereSource('')">All</span>
+            </div>
+          </div>
+          <label class="filter-label" style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:500;">
+            <input type="checkbox" id="everywhere-archive" onchange="fetchEverywhere()">
+            Include Grok archive dumps
+          </label>
+        </aside>
+        <div class="stream-feed" id="everywhere-feed">
+          <div style="text-align:center; padding:40px; color:var(--md-on-surface-variant);">
+            Loading memories from every local store…
+          </div>
         </div>
       </div>
     </section>
@@ -2112,7 +2167,15 @@ curl -X POST http://127.0.0.1:8788/api/recall \
     let animFrameId = null;
 
     // Initialize Studio
-    document.addEventListener('DOMContentLoaded', () => {
+    function applyHashTab() {
+      const initialTab = (location.hash || '').replace(/^#/, '').trim();
+      if (initialTab) switchTab(initialTab, { skipHash: true });
+    }
+
+    function bootStudio() {
+      if (window.__neuroStudioBooted) return;
+      window.__neuroStudioBooted = true;
+      applyHashTab();
       checkLicenseState();
       initTheme();
       initCanvas();
@@ -2120,13 +2183,21 @@ curl -X POST http://127.0.0.1:8788/api/recall \
       fetchMemories();
       fetchGraphData();
       fetchNeuromodulators();
-
-      // Polling for live status
+      window.addEventListener('hashchange', () => {
+        const tab = (location.hash || '').replace(/^#/, '').trim();
+        if (tab) switchTab(tab, { skipHash: true });
+      });
       setInterval(() => {
         fetchStats(true);
         fetchNeuromodulators(true);
       }, 8000);
-    });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', bootStudio);
+    } else {
+      bootStudio();
+    }
 
     // Theme Management
     function initTheme() {
@@ -2144,18 +2215,35 @@ curl -X POST http://127.0.0.1:8788/api/recall \
     }
 
     // Tab Navigation
-    function switchTab(tabId) {
+    function switchTab(tabId, opts) {
       document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
 
-      const btn = Array.from(document.querySelectorAll('.nav-tab')).find(b => b.getAttribute('onclick').includes(tabId));
+      const btn = Array.from(document.querySelectorAll('.nav-tab')).find(b => {
+        return b.getAttribute('data-tab') === tabId || (b.getAttribute('onclick') || '').includes("'" + tabId + "'");
+      });
       if (btn) btn.classList.add('active');
 
       const pane = document.getElementById('tab-' + tabId);
       if (pane) pane.classList.add('active');
 
+      if (!(opts && opts.skipHash)) {
+        if (history.replaceState) {
+          history.replaceState(null, '', '#' + tabId);
+        } else {
+          location.hash = tabId;
+        }
+      }
+
       if (tabId === 'graph') {
         resizeCanvas();
+      }
+      if (tabId === 'everywhere') {
+        fetchEverywhere();
+        const everywherePane = document.getElementById('tab-everywhere');
+        if (everywherePane && window.innerWidth < 960) {
+          everywherePane.scrollIntoView({ behavior: 'auto', block: 'start' });
+        }
       }
     }
 
@@ -2394,6 +2482,130 @@ curl -X POST http://127.0.0.1:8788/api/recall \
       appState.selectedTag = '';
       appState.searchQuery = '';
       fetchMemories();
+    }
+
+    const everywhereState = { source: '', query: '', loaded: false };
+    let everywhereTimer = null;
+
+    function debounceEverywhereSearch() {
+      clearTimeout(everywhereTimer);
+      everywhereTimer = setTimeout(() => {
+        everywhereState.query = document.getElementById('everywhere-search').value.trim();
+        fetchEverywhere();
+      }, 280);
+    }
+
+    function selectEverywhereSource(source) {
+      everywhereState.source = source || '';
+      fetchEverywhere();
+    }
+
+    function resetEverywhere() {
+      everywhereState.source = '';
+      everywhereState.query = '';
+      const search = document.getElementById('everywhere-search');
+      const archive = document.getElementById('everywhere-archive');
+      if (search) search.value = '';
+      if (archive) archive.checked = false;
+      fetchEverywhere();
+    }
+
+    async function fetchEverywhere() {
+      const feed = document.getElementById('everywhere-feed');
+      if (!feed) return;
+      const archive = document.getElementById('everywhere-archive');
+      const params = new URLSearchParams();
+      params.set('limit', everywhereState.source === 'neuro' ? '80' : '60');
+      if (everywhereState.source) params.set('source', everywhereState.source);
+      if (everywhereState.query) params.set('q', everywhereState.query);
+      if (archive && archive.checked) params.set('archive', '1');
+      try {
+        const res = await fetch(`${API_BASE}/api/everywhere?${params.toString()}`);
+        if (!res.ok) throw new Error('everywhere ' + res.status);
+        const data = await res.json();
+        everywhereState.loaded = true;
+        renderEverywhereSources(data.sources || [], data.mix_count || data.total);
+        renderEverywhereFeed(data);
+      } catch (err) {
+        feed.innerHTML = `<div style="text-align:center; padding:40px; color:var(--md-on-surface-variant); background:var(--md-surface); border-radius:var(--radius-lg); border:1px solid var(--md-outline-variant);">Could not load the everywhere ledger. Is the daemon on :8094?</div>`;
+      }
+    }
+
+    function renderEverywhereSources(sources, mixCount) {
+      const cloud = document.getElementById('everywhere-source-chips');
+      if (!cloud) return;
+      const chips = [
+        { id: '', label: 'All', count: mixCount },
+        ...sources
+      ];
+      cloud.innerHTML = chips.map(s => {
+        const id = s.id || '';
+        const selected = everywhereState.source === id ? 'selected' : '';
+        const count = s.count == null ? '' : `<span class="source-count">${s.count}</span>`;
+        return `<span class="filter-chip ${selected}" data-source="${escapeHtml(id)}" onclick="selectEverywhereSource('${escapeHtml(id)}')">${escapeHtml(s.label || 'All')} ${count}</span>`;
+      }).join('');
+    }
+
+    function everywhereCardHtml(it) {
+      const tagsHtml = (it.tags || []).map(t => `<span class="tag-badge">#${escapeHtml(t)}</span>`).join(' ');
+      const dateStr = it.mtime ? new Date(it.mtime * 1000).toLocaleString() : '';
+      const source = escapeHtml(it.source || '');
+      const title = escapeHtml(it.title || 'Untitled');
+      const text = escapeHtml(it.text || '');
+      const path = escapeHtml(it.path || '');
+      const scope = it.scope ? `<span class="tag-badge">${escapeHtml(it.scope)}</span>` : '';
+      const truncated = it.truncated ? '<span class="chip-accent" style="background:var(--md-primary-container); color:var(--md-on-primary-container);">clipped</span>' : '';
+      const neuroBtn = it.neuro_id
+        ? `<button class="btn btn-outlined" style="padding:3px 10px; font-size:11px; color:#F5E6AB;" onclick="event.stopPropagation(); spotlightEngramIn3D('${escapeHtml(it.neuro_id)}')">Stream</button>`
+        : '';
+      return `
+        <div class="memory-card" onclick="this.querySelector('.memory-text') && this.querySelector('.memory-text').classList.toggle('clamp')">
+          <div class="card-top">
+            <span class="agent-tag">
+              <span class="chip-accent" style="background:var(--md-primary-container); color:var(--md-on-primary-container); text-transform:uppercase;">${source}</span>
+              ${scope}
+              ${truncated}
+            </span>
+            <div style="display:flex; align-items:center; gap:8px;">
+              ${neuroBtn}
+            </div>
+          </div>
+          <div style="font-family:var(--font-google); font-size:16px; font-weight:600; color:var(--md-on-surface);">${title}</div>
+          <div class="memory-text clamp">${text}</div>
+          <div class="chip-cloud">${tagsHtml}</div>
+          <div class="memory-meta-row">
+            <span class="everywhere-path">${path}</span>
+            <span style="font-size:11px;">${dateStr}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderEverywhereFeed(data) {
+      const feed = document.getElementById('everywhere-feed');
+      const items = data.items || [];
+      if (!items.length) {
+        feed.innerHTML = `<div style="text-align:center; padding:40px; color:var(--md-on-surface-variant); background:var(--md-surface); border-radius:var(--radius-lg); border:1px solid var(--md-outline-variant);">
+          No memories in this slice. Try another source or clear the search.
+        </div>`;
+        return;
+      }
+      const shown = data.shown || items.length;
+      const total = data.total || items.length;
+      const order = ['grok', 'hermes', 'zoth-bot', 'agy', 'neuro'];
+      const labels = { grok: 'Grok', hermes: 'Hermes', 'zoth-bot': 'Zoth Bot', agy: 'AGY', neuro: 'Neuro substrate (recent slice)' };
+      let body = `<div style="font-size:12px; color:var(--md-on-surface-variant); letter-spacing:0.08em; text-transform:uppercase;">Showing ${shown} of ${total}</div>`;
+      if (!everywhereState.source) {
+        for (const src of order) {
+          const group = items.filter(it => it.source === src);
+          if (!group.length) continue;
+          body += `<div class="panel-title" style="padding-top:8px;"><span>${labels[src] || src}</span><span class="source-count">${group.length}</span></div>`;
+          body += group.map(everywhereCardHtml).join('');
+        }
+      } else {
+        body += items.map(everywhereCardHtml).join('');
+      }
+      feed.innerHTML = body;
     }
 
     async function handleIngestSubmit(e) {
