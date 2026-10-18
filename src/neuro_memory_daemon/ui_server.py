@@ -30,6 +30,7 @@ from neuro_memory_daemon import (
     get_default_daemon,
 )
 from neuro_memory_daemon.compat import normalize_path, safe_read_text
+from neuro_memory_daemon.everywhere import collect as collect_everywhere
 from neuro_memory_daemon.storage import StorageEngine, MemoryRecord
 from neuro_memory_daemon.synapse_engine import SynapseEngine
 from neuro_memory_daemon.graph_builder import GraphBuilder
@@ -294,6 +295,25 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
             top_k = int(params.get("top_k", [5])[0])
             res = daemon.audit_metacognition(query=query, top_k=top_k)
             self._send_json(res)
+            return
+
+        # Federated local memory ledger (Grok / Hermes / Zoth Bot / AGY + Neuro slice)
+        if path in ("/api/everywhere", "/v1/everywhere"):
+            source = params.get("source", [""])[0].strip()
+            q = params.get("q", [""])[0].strip() or params.get("query", [""])[0].strip()
+            include_archive = params.get("archive", ["false"])[0].lower() in ("true", "1", "yes")
+            try:
+                limit = int(params.get("limit", ["80"])[0])
+            except (TypeError, ValueError):
+                limit = 80
+            payload = collect_everywhere(
+                daemon=daemon,
+                source=source,
+                query=q,
+                limit=limit,
+                include_archive=include_archive,
+            )
+            self._send_json(payload)
             return
 
         # Neuromodulatory Status & Yerkes-Dodson Curve

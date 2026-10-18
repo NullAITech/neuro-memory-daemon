@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Local neuro-memory CLI shim. `web` / `desktop` / no args open the Studio.
+set -u
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CMD="${1:-web}"
+
+case "$CMD" in
+  web|desktop|studio|everywhere|"")
+    exec "$ROOT/bin/zoth-memory"
+    ;;
+esac
+
+export PYTHONPATH="${ROOT}/src${PYTHONPATH:+:$PYTHONPATH}"
+if [[ -x /opt/zothos-ai-env/bin/python3 ]]; then
+  exec /opt/zothos-ai-env/bin/python3 -m neuro_memory_daemon.cli "$@"
+fi
+exec python3 -m neuro_memory_daemon.cli "$@"
