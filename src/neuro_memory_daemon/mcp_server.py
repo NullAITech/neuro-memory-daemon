@@ -533,6 +533,50 @@ class MCPServer:
             handler=self._tool_obsidian_bundle_export,
         )
 
+        # 19. obsidian_note_read
+        self._register_tool(
+            name="obsidian_note_read",
+            description=(
+                "Safely reads an Obsidian Flavored Markdown note from the Vault with strict fixed-root "
+                "confinement, parsing its YAML frontmatter properties, [[wikilinks]], callouts, and word count."
+            ),
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "Relative path or note title to read (default: '00 Home.md').",
+                        "default": "00 Home.md",
+                    },
+                },
+            },
+            handler=self._tool_obsidian_note_read,
+        )
+
+        # 20. obsidian_note_write
+        self._register_tool(
+            name="obsidian_note_write",
+            description=(
+                "Safely writes or updates an Obsidian Flavored Markdown note inside the Vault with strict "
+                "fixed-root confinement, and synchronizes a corresponding STDP memory engram into the :8094 cortex."
+            ),
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "relPath": {
+                        "type": "string",
+                        "description": "Relative path for the note (e.g. '04-Ingested/research-note.md' or 'Notes/Topic.md').",
+                    },
+                    "content": {
+                        "type": "string",
+                        "description": "Full Obsidian Flavored Markdown content to write.",
+                    },
+                },
+                "required": ["relPath", "content"],
+            },
+            handler=self._tool_obsidian_note_write,
+        )
+
     # -----------------------------------------------------------------------
     # Tool Handlers
     # -----------------------------------------------------------------------
@@ -1302,6 +1346,172 @@ health_score: 100
             "canvasesCount": 0,
             "basesCount": 0,
             "topHubs": [],
+        }, indent=2)
+
+    def _tool_obsidian_note_read(self, args: Dict[str, Any]) -> str:
+        from pathlib import Path
+        import re
+        from urllib.parse import unquote
+
+        vault_dir = Path.home() / "Documents" / "Obsidian Vault"
+        if not vault_dir.exists():
+            return json.dumps({"ok": False, "error": "Vault directory not found"}, indent=2)
+
+        raw = unquote(str(args.get("path") or args.get("note") or args.get("title") or "00 Home.md").strip())
+        if not raw:
+            raw = "00 Home.md"
+
+        vault_root = os.path.realpath(str(vault_dir))
+        normalized = raw.replace("\\", "/")
+
+        if os.path.isabs(normalized):
+            candidate = os.path.realpath(normalized)
+        else:
+            candidate = os.path.realpath(os.path.abspath(os.path.join(vault_root, normalized)))
+
+        try:
+            if os.path.commonpath([vault_root, candidate]) != vault_root:
+                return json.dumps({"ok": False, "error": "Path traversal forbidden: requested path is outside vault root"}, indent=2)
+        except ValueError:
+            return json.dumps({"ok": False, "error": "Path traversal forbidden: drive mismatch or invalid path"}, indent=2)
+
+        cand_path = Path(candidate)
+        target_path = None
+        if cand_path.exists() and cand_path.is_file():
+            target_path = cand_path
+        elif not candidate.endswith(".md"):
+            cand_md = Path(candidate + ".md")
+            if cand_md.exists() and cand_md.is_file():
+                target_path = cand_md
+
+        if not target_path:
+            clean_stem = cand_path.stem.lower()
+            for p in vault_dir.rglob("*.md"):
+                if any(part.startswith(".") for part in p.parts):
+                    continue
+                if p.stem.lower() == clean_stem or p.name.lower() == raw.lower():
+                    p_real = os.path.realpath(str(p))
+                    if os.path.commonpath([vault_root, p_real]) == vault_root:
+                        target_path = Path(p_real)
+                        break
+
+        if not target_path or not target_path.exists():
+            return json.dumps({"ok": False, "error": f"Note not found: {raw}"}, indent=2)
+
+        content = target_path.read_text(encoding="utf-8", errors="replace")
+        title = target_path.stem
+        rel_path = str(target_path.relative_to(vault_dir))
+        parts = target_path.relative_to(vault_dir).parts
+        cluster = parts[0] if len(parts) > 1 else "Root"
+        word_count = len(re.findall(r'\b\w+\b', content))
+
+        fm = {}
+        fm_match = re.match(r"^---\s*\n(.*?)\n---\s*\n", content, re.DOTALL)
+        if fm_match:
+            try:
+                import yaml
+                parsed = yaml.safe_load(fm_match.group(1))
+                if isinstance(parsed, dict):
+                    fm = parsed
+            except Exception:
+                pass
+
+        raw_links = re.findall(r'\[\[([^\]\|]+)(?:\|[^\]]+)?\]\]', content)
+        seen = set()
+        wikilinks = [w.strip() for w in raw_links if w.strip() and not (w.strip() in seen or seen.add(w.strip()))]
+
+        return json.dumps({
+            "ok": True,
+            "title": title,
+            "relPath": rel_path,
+            "cluster": cluster,
+            "wordCount": word_count,
+            "frontmatter": fm,
+            "wikilinks": wikilinks,
+            "content": content,
+        }, indent=2)
+
+    def _tool_obsidian_note_write(self, args: Dict[str, Any]) -> str:
+        from pathlib import Path
+        import re
+        from urllib.parse import unquote
+
+        vault_dir = Path.home() / "Documents" / "Obsidian Vault"
+        if not vault_dir.exists():
+            return json.dumps({"ok": False, "error": "Vault directory not found"}, indent=2)
+
+        rel_path = str(args.get("relPath") or args.get("path") or "").strip()
+        content = args.get("content")
+
+        if not rel_path:
+            return json.dumps({"ok": False, "error": "Parameter 'relPath' is required."}, indent=2)
+        if content is None:
+            return json.dumps({"ok": False, "error": "Parameter 'content' is required."}, indent=2)
+
+        vault_root = os.path.realpath(str(vault_dir))
+        normalized = unquote(rel_path).replace("\\", "/")
+
+        if os.path.isabs(normalized):
+            candidate = os.path.realpath(normalized)
+        else:
+            candidate = os.path.realpath(os.path.abspath(os.path.join(vault_root, normalized)))
+
+        try:
+            if os.path.commonpath([vault_root, candidate]) != vault_root:
+                return json.dumps({"ok": False, "error": "Path traversal forbidden: requested path is outside vault root"}, indent=2)
+        except ValueError:
+            return json.dumps({"ok": False, "error": "Path traversal forbidden: drive mismatch or invalid path"}, indent=2)
+
+        if not candidate.endswith(".md"):
+            candidate += ".md"
+
+        target_path = Path(candidate)
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        target_path.write_text(content, encoding="utf-8")
+
+        title = target_path.stem
+        norm_rel = str(target_path.relative_to(vault_dir))
+        word_count = len(re.findall(r'\b\w+\b', content))
+
+        fm_tags = []
+        fm_match = re.match(r"^---\s*\n(.*?)\n---\s*\n", content, re.DOTALL)
+        if fm_match:
+            try:
+                import yaml
+                parsed = yaml.safe_load(fm_match.group(1))
+                if isinstance(parsed, dict) and "tags" in parsed:
+                    if isinstance(parsed["tags"], list):
+                        fm_tags = [str(t).lower().replace(" ", "-") for t in parsed["tags"] if t]
+                    elif isinstance(parsed["tags"], str):
+                        fm_tags = [t.strip().lower().replace(" ", "-") for t in parsed["tags"].split(",") if t.strip()]
+            except Exception:
+                pass
+
+        tags = ["obsidian", "note"]
+        if len(target_path.relative_to(vault_dir).parts) > 1:
+            tags.append(target_path.relative_to(vault_dir).parts[0].lower().replace(" ", "-"))
+        tags.extend(fm_tags)
+        tags = list(dict.fromkeys(tags))
+
+        clean_body = re.sub(r"^---\s*\n.*?\n---\s*\n", "", content, flags=re.DOTALL).strip()
+        snippet = clean_body[:280].replace("\n", " ").strip()
+        if hasattr(self.daemon, "store"):
+            try:
+                self.daemon.store(
+                    text=f"[Obsidian Note · [[{title}]]] {snippet}",
+                    tags=tags,
+                    importance=0.95,
+                    category="semantic",
+                    agent_id="obsidian-mcp",
+                )
+            except Exception:
+                pass
+
+        return json.dumps({
+            "ok": True,
+            "title": title,
+            "relPath": norm_rel,
+            "wordCount": word_count,
         }, indent=2)
 
     # -----------------------------------------------------------------------

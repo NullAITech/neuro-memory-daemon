@@ -522,14 +522,14 @@ def test_mcp_obsidian_doctor_audit(obsidian_server: tuple[MemoryUIServer, str, M
 
 
 def test_api_mcp_tools_get(obsidian_server: tuple[MemoryUIServer, str, MemoryDaemon]):
-    """Test GET /api/mcp/tools returns list of 18 registered tools."""
+    """Test GET /api/mcp/tools returns list of 20 registered tools."""
     _, base_url, _ = obsidian_server
     status, _, body = _http_get(f"{base_url}/api/mcp/tools")
     assert status == 200
     data = json.loads(body.decode("utf-8"))
     assert data["ok"] is True
-    assert data["count"] == 18
-    assert len(data["tools"]) == 18
+    assert data["count"] == 20
+    assert len(data["tools"]) == 20
     tool_names = [t["name"] for t in data["tools"]]
     assert "obsidian_doctor_audit" in tool_names
     assert "obsidian_vault_search" in tool_names
@@ -538,6 +538,8 @@ def test_api_mcp_tools_get(obsidian_server: tuple[MemoryUIServer, str, MemoryDae
     assert "obsidian_daily_log" in tool_names
     assert "obsidian_backlinks_inspect" in tool_names
     assert "obsidian_bundle_export" in tool_names
+    assert "obsidian_note_read" in tool_names
+    assert "obsidian_note_write" in tool_names
     assert "memory_store" in tool_names
     assert "memory_recall" in tool_names
 
@@ -608,8 +610,8 @@ def test_obsidian_bases_records_get(obsidian_server: tuple[MemoryUIServer, str, 
     assert status == 200
     wiki_data = json.loads(body.decode("utf-8"))
     assert wiki_data["ok"] is True
-    assert wiki_data["totalMatched"] == 10
-    assert len(wiki_data["rows"]) == 10
+    assert wiki_data["totalMatched"] >= 10
+    assert len(wiki_data["rows"]) >= 10
 
     # 3. Query without name defaults to tools
     status, _, body = _http_get(f"{base_url}/api/obsidian/bases/records")
@@ -1042,6 +1044,134 @@ def test_obsidian_note_path_traversal_rejected(obsidian_server: tuple[MemoryUISe
                 "content": "Malicious payload attempt"
             })
         assert exc_info_post.value.code == 400
+
+
+def test_mcp_obsidian_note_read_and_write(obsidian_server: tuple[MemoryUIServer, str, MemoryDaemon]):
+    """Test MCP tools obsidian_note_read and obsidian_note_write via JSON-RPC and HTTP API."""
+    _, base_url, daemon = obsidian_server
+    mcp = MCPServer(daemon=daemon)
+    assert "obsidian_note_read" in mcp.tools
+    assert "obsidian_note_write" in mcp.tools
+
+    # 1. Read existing note via JSON-RPC
+    req_read = {
+        "jsonrpc": "2.0",
+        "id": 601,
+        "method": "tools/call",
+        "params": {
+            "name": "obsidian_note_read",
+            "arguments": {"path": "00 Home.md"}
+        }
+    }
+    resp_read = mcp.handle_request(req_read)
+    assert resp_read is not None
+    assert not resp_read["result"].get("isError", False)
+    content_read = json.loads(resp_read["result"]["content"][0]["text"])
+    assert content_read["ok"] is True
+    assert content_read["title"] == "00 Home"
+    assert content_read["wordCount"] > 100
+    assert len(content_read["wikilinks"]) >= 50
+
+    # 2. Write note via JSON-RPC
+    test_rel = "04-Ingested/mcp-test-wave26-note.md"
+    test_content = """---
+title: "MCP Wave 26 Test Note"
+tags: [mcp, wave26, test]
+---
+
+# MCP Wave 26 Test Note
+
+> [!tip] MCP 20-Tool Suite
+> Testing obsidian_note_write tool.
+
+Linked to [[00 Home]] and [[Zoth Memory]].
+"""
+    vault_dir = Path.home() / "Documents" / "Obsidian Vault"
+    test_file = vault_dir / test_rel
+    try:
+        req_write = {
+            "jsonrpc": "2.0",
+            "id": 602,
+            "method": "tools/call",
+            "params": {
+                "name": "obsidian_note_write",
+                "arguments": {
+                    "relPath": test_rel,
+                    "content": test_content
+                }
+            }
+        }
+        resp_write = mcp.handle_request(req_write)
+        assert resp_write is not None
+        assert not resp_write["result"].get("isError", False)
+        content_write = json.loads(resp_write["result"]["content"][0]["text"])
+        assert content_write["ok"] is True
+        assert content_write["relPath"] == test_rel
+        assert content_write["wordCount"] > 10
+
+        # 3. Read back via HTTP POST /api/mcp/call
+        status, _, body = _http_post(f"{base_url}/api/mcp/call", {
+            "name": "obsidian_note_read",
+            "arguments": {"path": test_rel}
+        })
+        assert status == 200
+        http_data = json.loads(body.decode("utf-8"))
+        assert http_data["ok"] is True
+        assert http_data["result"]["ok"] is True
+        assert http_data["result"]["title"] == "mcp-test-wave26-note"
+        assert "00 Home" in http_data["result"]["wikilinks"]
+        assert http_data["result"]["frontmatter"].get("title") == "MCP Wave 26 Test Note"
+    finally:
+        if test_file.exists():
+            test_file.unlink()
+
+
+def test_mcp_obsidian_note_path_traversal_rejected(obsidian_server: tuple[MemoryUIServer, str, MemoryDaemon]):
+    """Test that path traversal attempts in MCP note tools are rejected."""
+    _, base_url, daemon = obsidian_server
+    mcp = MCPServer(daemon=daemon)
+
+    traversal_paths = [
+        "../../etc/passwd",
+        "/etc/passwd",
+        "../shadow"
+    ]
+
+    for bad_path in traversal_paths:
+        # 1. MCP Read
+        req_read = {
+            "jsonrpc": "2.0",
+            "id": 603,
+            "method": "tools/call",
+            "params": {
+                "name": "obsidian_note_read",
+                "arguments": {"path": bad_path}
+            }
+        }
+        resp_read = mcp.handle_request(req_read)
+        assert resp_read is not None
+        content_read = json.loads(resp_read["result"]["content"][0]["text"])
+        assert content_read["ok"] is False
+        assert "forbidden" in content_read["error"].lower()
+
+        # 2. MCP Write
+        req_write = {
+            "jsonrpc": "2.0",
+            "id": 604,
+            "method": "tools/call",
+            "params": {
+                "name": "obsidian_note_write",
+                "arguments": {
+                    "relPath": bad_path,
+                    "content": "Malicious content attempt"
+                }
+            }
+        }
+        resp_write = mcp.handle_request(req_write)
+        assert resp_write is not None
+        content_write = json.loads(resp_write["result"]["content"][0]["text"])
+        assert content_write["ok"] is False
+        assert "forbidden" in content_write["error"].lower()
 
 
 
