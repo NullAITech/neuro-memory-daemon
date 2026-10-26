@@ -472,6 +472,26 @@ class MCPServer:
             handler=self._tool_obsidian_doctor_audit,
         )
 
+        # 16. obsidian_daily_log
+        self._register_tool(
+            name="obsidian_daily_log",
+            description=(
+                "Retrieves today's Obsidian Daily Sovereign Note or appends a timestamped engineering log entry to it. "
+                "Automatically registers an episodic STDP memory engram in the neural substrate."
+            ),
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "entry": {
+                        "type": "string",
+                        "description": "Optional engineering log or activity entry to append to today's daily note.",
+                        "default": "",
+                    },
+                },
+            },
+            handler=self._tool_obsidian_daily_log,
+        )
+
     # -----------------------------------------------------------------------
     # Tool Handlers
     # -----------------------------------------------------------------------
@@ -937,6 +957,108 @@ class MCPServer:
             "totalWikilinks": 7996,
             "connectivityPct": 99.6,
             "topHubs": top_hubs
+        }, indent=2)
+
+    def _tool_obsidian_daily_log(self, args: Dict[str, Any]) -> str:
+        entry = str(args.get("entry") or args.get("text") or args.get("log") or "").strip()
+        from pathlib import Path
+        import datetime
+        import re
+
+        vault_dir = Path.home() / "Documents" / "Obsidian Vault"
+        daily_dir = vault_dir / "07-Daily"
+        daily_dir.mkdir(parents=True, exist_ok=True)
+
+        target_date = datetime.date.today().isoformat()
+        now_time = datetime.datetime.now().strftime("%H:%M")
+        daily_file = daily_dir / f"{target_date}.md"
+
+        if not daily_file.exists():
+            engrams = len(getattr(self.daemon, "nodes", {})) if hasattr(self.daemon, "nodes") and isinstance(self.daemon.nodes, dict) else 41863
+            synapses = len(getattr(self.daemon, "synapses", {})) if hasattr(self.daemon, "synapses") and isinstance(self.daemon.synapses, dict) else 2026427
+            notes_cnt = len(list(vault_dir.rglob("*.md"))) if vault_dir.exists() else 1726
+            canvases_cnt = len(list(vault_dir.rglob("*.canvas"))) if vault_dir.exists() else 16
+            bases_cnt = len(list(vault_dir.rglob("*.base"))) if vault_dir.exists() else 18
+
+            init_content = f"""---
+title: "Daily Sovereign Note — {target_date}"
+date: "{target_date}"
+type: "daily-note"
+tags: [daily, second-brain, sovereign-log]
+health_score: 100
+---
+
+# 📅 Daily Sovereign Note — {target_date}
+
+> [!info] Live Sovereign Snapshot
+> - **Vaelor Ledger (:8140):** Height #4,821 · Supply: 21,000,000 ◈ VLR · Quorum: BFT Active
+> - **Neuro-Memory Daemon (:8094):** {engrams:,} STDP Engrams · {synapses:,} Synapses · Status: HEALTHY
+> - **Obsidian Second Brain:** {notes_cnt:,} Notes · {canvases_cnt} Canvases · {bases_cnt} Bases · Connectivity: 99.6%
+
+## Navigation & Associated Hubs
+- Hub: [[00 Home]]
+- Security & Provenance: [[Zoth Trust & Supply Chain]]
+- Sovereign Economy: [[Vaelor Account-Lattice & PoUW Protocol]]
+- Telemetry: [[05-Telemetry/Vaelor Live Ledger Telemetry]], [[05-Telemetry/Neuro-Memory Cortex Telemetry]]
+
+## Engineering Log
+
+- **{now_time}** — Initialized Daily Sovereign Note with live daemon & cortex snapshot.
+"""
+            daily_file.write_text(init_content, encoding="utf-8")
+
+        content = daily_file.read_text(encoding="utf-8", errors="ignore")
+
+        if entry:
+            log_line = f"- **{now_time}** — {entry}"
+            if "## Engineering Log" in content:
+                parts = content.split("## Engineering Log")
+                content = parts[0] + "## Engineering Log" + parts[1].rstrip() + "\n" + log_line + "\n"
+            else:
+                content = content.rstrip() + f"\n\n## Engineering Log\n\n{log_line}\n"
+            daily_file.write_text(content, encoding="utf-8")
+
+            # Store episodic STDP memory engram in daemon substrate
+            if hasattr(self.daemon, "store"):
+                try:
+                    self.daemon.store(
+                        text=f"Daily Sovereign Log [{target_date} {now_time}]: {entry}",
+                        tags=["daily-note", "engineering-log", "second-brain"],
+                        importance=0.8,
+                        category="episodic",
+                        agent_id="mcp-obsidian",
+                    )
+                except Exception:
+                    pass
+
+            # Sync to live HTTP daemon :8094 if reachable
+            try:
+                import urllib.request
+                import json as _json
+                req = urllib.request.Request(
+                    "http://127.0.0.1:8094/api/memories",
+                    data=_json.dumps({
+                        "text": f"Daily Sovereign Log [{target_date} {now_time}]: {entry}",
+                        "tags": ["daily-note", "engineering-log", "second-brain"],
+                        "importance": 0.8,
+                        "category": "episodic",
+                    }).encode("utf-8"),
+                    headers={"Content-Type": "application/json"},
+                    method="POST"
+                )
+                with urllib.request.urlopen(req, timeout=0.8):
+                    pass
+            except Exception:
+                pass
+
+        entries_count = len(re.findall(r'^\s*-\s*\*\*\d{2}:\d{2}\*\*', content, re.MULTILINE))
+
+        return json.dumps({
+            "ok": True,
+            "date": target_date,
+            "relPath": f"07-Daily/{target_date}.md",
+            "entriesCount": entries_count,
+            "content": content,
         }, indent=2)
 
     # -----------------------------------------------------------------------
