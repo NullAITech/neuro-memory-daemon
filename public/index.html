@@ -3125,6 +3125,220 @@ curl -X POST http://127.0.0.1:8788/api/recall \
           </form>
         </div>
 
+        <!-- Interactive zoth-second-brain CLI & @kepano/obsidian-skills Command Palette (#obsidian-cli-palette) -->
+        <div class="wiki-panel" id="obsidian-cli-palette" style="margin-top:16px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:20px;">⌨️</span>
+              <div>
+                <div style="font-size:15px; font-weight:700; color:#F59E0B;">zoth-second-brain CLI &amp; @kepano/obsidian-skills Command Palette</div>
+                <div style="font-size:11.5px; color:var(--md-on-surface-variant);">12 Autonomous Terminal Commands &amp; Obsidian Specification Tools for Sovereign Vault Management</div>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <span class="chip-accent" style="background:rgba(245,158,11,0.15); color:#FCD34D; border:1px solid rgba(245,158,11,0.3); font-size:10.5px; padding:3px 8px; border-radius:12px;">12 CLI Tools</span>
+              <span class="chip-accent" style="background:rgba(232,121,249,0.15); color:#F0ABFC; border:1px solid rgba(232,121,249,0.3); font-size:10.5px; padding:3px 8px; border-radius:12px;">@kepano Specs</span>
+              <button class="btn btn-outlined" style="padding:4px 10px; font-size:11px; border-color:rgba(245,158,11,0.4); color:#FCD34D;" onclick="copyCliCommand('/home/zoth/NullAITech/zoth-os/bin/zoth-second-brain help')">📋 Copy CLI Path</button>
+            </div>
+          </div>
+
+          <!-- Command Palette Filter Bar -->
+          <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;">
+            <div style="flex:1; min-width:240px; position:relative;">
+              <input type="text" class="input-field" id="cli-palette-filter" placeholder="Filter CLI subcommands (e.g. 'audit', 'canvas', 'sync', 'bundle', 'wiki')..." oninput="filterCliCommands(this.value)" style="width:100%; padding:8px 12px; background:#0F0F18; border:1px solid #2A2A38; border-radius:6px; color:#EDEFF2; font-size:12.5px;">
+            </div>
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+              <button type="button" class="btn btn-outlined" onclick="filterCliCommandsTag('all')" style="padding:3px 9px; font-size:10.5px; border-radius:10px; border-color:rgba(245,158,11,0.4); color:#FCD34D;">All (12)</button>
+              <button type="button" class="btn btn-outlined" onclick="filterCliCommandsTag('Diagnostics')" style="padding:3px 9px; font-size:10.5px; border-radius:10px; border-color:rgba(16,185,129,0.4); color:#6EE7B7;">Diagnostics</button>
+              <button type="button" class="btn btn-outlined" onclick="filterCliCommandsTag('Spec Tools')" style="padding:3px 9px; font-size:10.5px; border-radius:10px; border-color:rgba(232,121,249,0.4); color:#F0ABFC;">Spec Tools</button>
+              <button type="button" class="btn btn-outlined" onclick="filterCliCommandsTag('Memory')" style="padding:3px 9px; font-size:10.5px; border-radius:10px; border-color:rgba(56,189,248,0.4); color:#7DD3FC;">Memory</button>
+            </div>
+          </div>
+
+          <!-- 12 Subcommands Grid -->
+          <div id="cli-commands-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:12px;">
+            <!-- 1. status -->
+            <div class="cli-cmd-card" data-command="status" data-tag="Diagnostics" data-desc="Show live status of Obsidian Vault, daemons (:8094, :8140, :3000, :5173, :9393), and STDP cortex" style="background:#0F0F18; border:1px solid #28283C; border-radius:8px; padding:12px; display:flex; flex-direction:column; justify-content:space-between; gap:10px;">
+              <div>
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                  <span style="font-family:var(--font-mono); font-size:12.5px; font-weight:700; color:#10B981;">zoth-second-brain status</span>
+                  <span style="font-size:9.5px; color:#10B981; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.25); padding:1px 6px; border-radius:4px;">Diagnostics</span>
+                </div>
+                <div style="font-size:11.5px; color:#94A3B8; line-height:1.45;">Show live status of Obsidian Vault, daemons (:8094, :8140, :3000, :5173, :9393), and STDP cortex.</div>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; background:#08080E; border:1px solid #1E1E2C; border-radius:5px; padding:5px 8px;">
+                <code style="font-size:11px; color:#E2E8F0; font-family:var(--font-mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">zoth-second-brain status</code>
+                <button class="btn btn-outlined" onclick="copyCliCommand('zoth-second-brain status')" style="padding:2px 8px; font-size:10px; border-color:rgba(16,185,129,0.4); color:#10B981; cursor:pointer; flex-shrink:0;">📋 Copy</button>
+              </div>
+            </div>
+
+            <!-- 2. sync -->
+            <div class="cli-cmd-card" data-command="sync" data-tag="Memory" data-desc="Trigger bidirectional sync with Neuro-Memory Daemon (:8094)" style="background:#0F0F18; border:1px solid #28283C; border-radius:8px; padding:12px; display:flex; flex-direction:column; justify-content:space-between; gap:10px;">
+              <div>
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                  <span style="font-family:var(--font-mono); font-size:12.5px; font-weight:700; color:#38BDF8;">zoth-second-brain sync</span>
+                  <span style="font-size:9.5px; color:#38BDF8; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25); padding:1px 6px; border-radius:4px;">Memory</span>
+                </div>
+                <div style="font-size:11.5px; color:#94A3B8; line-height:1.45;">Trigger bidirectional sync with Neuro-Memory Daemon (:8094) and biomorphic STDP engrams.</div>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; background:#08080E; border:1px solid #1E1E2C; border-radius:5px; padding:5px 8px;">
+                <code style="font-size:11px; color:#E2E8F0; font-family:var(--font-mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">zoth-second-brain sync</code>
+                <button class="btn btn-outlined" onclick="copyCliCommand('zoth-second-brain sync')" style="padding:2px 8px; font-size:10px; border-color:rgba(56,189,248,0.4); color:#38BDF8; cursor:pointer; flex-shrink:0;">📋 Copy</button>
+              </div>
+            </div>
+
+            <!-- 3. search <query> -->
+            <div class="cli-cmd-card" data-command="search" data-tag="Search" data-desc="Simultaneously search all 1,729+ Vault notes and :8094 STDP memories" style="background:#0F0F18; border:1px solid #28283C; border-radius:8px; padding:12px; display:flex; flex-direction:column; justify-content:space-between; gap:10px;">
+              <div>
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                  <span style="font-family:var(--font-mono); font-size:12.5px; font-weight:700; color:#F59E0B;">zoth-second-brain search &lt;query&gt;</span>
+                  <span style="font-size:9.5px; color:#F59E0B; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.25); padding:1px 6px; border-radius:4px;">Search</span>
+                </div>
+                <div style="font-size:11.5px; color:#94A3B8; line-height:1.45;">Simultaneously search all 1,729+ Vault notes and :8094 STDP memories with relevance scoring.</div>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; background:#08080E; border:1px solid #1E1E2C; border-radius:5px; padding:5px 8px;">
+                <code style="font-size:11px; color:#E2E8F0; font-family:var(--font-mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">zoth-second-brain search "Vaelor DAG"</code>
+                <button class="btn btn-outlined" onclick="copyCliCommand('zoth-second-brain search &quot;Vaelor DAG&quot;')" style="padding:2px 8px; font-size:10px; border-color:rgba(245,158,11,0.4); color:#F59E0B; cursor:pointer; flex-shrink:0;">📋 Copy</button>
+              </div>
+            </div>
+
+            <!-- 4. ingest <url-or-path> -->
+            <div class="cli-cmd-card" data-command="ingest" data-tag="Ingestion" data-desc="Ingest local file or URL into 04-Ingested/<slug>.md and :8094 STDP cortex" style="background:#0F0F18; border:1px solid #28283C; border-radius:8px; padding:12px; display:flex; flex-direction:column; justify-content:space-between; gap:10px;">
+              <div>
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                  <span style="font-family:var(--font-mono); font-size:12.5px; font-weight:700; color:#8B5CF6;">zoth-second-brain ingest &lt;path-or-url&gt;</span>
+                  <span style="font-size:9.5px; color:#8B5CF6; background:rgba(139,92,246,0.1); border:1px solid rgba(139,92,246,0.25); padding:1px 6px; border-radius:4px;">Ingestion</span>
+                </div>
+                <div style="font-size:11.5px; color:#94A3B8; line-height:1.45;">Ingest local file or URL into 04-Ingested/&lt;slug&gt;.md and :8094 STDP cortex via Defuddle extraction.</div>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; background:#08080E; border:1px solid #1E1E2C; border-radius:5px; padding:5px 8px;">
+                <code style="font-size:11px; color:#E2E8F0; font-family:var(--font-mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">zoth-second-brain ingest https://kernel.org</code>
+                <button class="btn btn-outlined" onclick="copyCliCommand('zoth-second-brain ingest https://kernel.org')" style="padding:2px 8px; font-size:10px; border-color:rgba(139,92,246,0.4); color:#8B5CF6; cursor:pointer; flex-shrink:0;">📋 Copy</button>
+              </div>
+            </div>
+
+            <!-- 5. canvas <topic> -->
+            <div class="cli-cmd-card" data-command="canvas" data-tag="Spec Tools" data-desc="Procedurally generate <Topic> Knowledge Map.canvas with Vault notes & STDP engrams" style="background:#0F0F18; border:1px solid #28283C; border-radius:8px; padding:12px; display:flex; flex-direction:column; justify-content:space-between; gap:10px;">
+              <div>
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                  <span style="font-family:var(--font-mono); font-size:12.5px; font-weight:700; color:#00E5FF;">zoth-second-brain canvas &lt;topic&gt;</span>
+                  <span style="font-size:9.5px; color:#00E5FF; background:rgba(0,229,255,0.1); border:1px solid rgba(0,229,255,0.25); padding:1px 6px; border-radius:4px;">JSON Canvas 1.0</span>
+                </div>
+                <div style="font-size:11.5px; color:#94A3B8; line-height:1.45;">Procedurally generate &lt;Topic&gt; Knowledge Map.canvas with Vault notes &amp; STDP engrams.</div>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; background:#08080E; border:1px solid #1E1E2C; border-radius:5px; padding:5px 8px;">
+                <code style="font-size:11px; color:#E2E8F0; font-family:var(--font-mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">zoth-second-brain canvas "Byzantine Consensus"</code>
+                <button class="btn btn-outlined" onclick="copyCliCommand('zoth-second-brain canvas &quot;Byzantine Consensus&quot;')" style="padding:2px 8px; font-size:10px; border-color:rgba(0,229,255,0.4); color:#00E5FF; cursor:pointer; flex-shrink:0;">📋 Copy</button>
+              </div>
+            </div>
+
+            <!-- 6. audit -->
+            <div class="cli-cmd-card" data-command="audit" data-tag="Diagnostics" data-desc="Run comprehensive doctor health audit on 100% of .canvas, .base, and notes" style="background:#0F0F18; border:1px solid #28283C; border-radius:8px; padding:12px; display:flex; flex-direction:column; justify-content:space-between; gap:10px;">
+              <div>
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                  <span style="font-family:var(--font-mono); font-size:12.5px; font-weight:700; color:#10B981;">zoth-second-brain audit</span>
+                  <span style="font-size:9.5px; color:#10B981; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.25); padding:1px 6px; border-radius:4px;">Doctor Health</span>
+                </div>
+                <div style="font-size:11.5px; color:#94A3B8; line-height:1.45;">Run comprehensive doctor health audit on 100% of .canvas, .base, and notes (Score: 100/100 ✦ PERFECT).</div>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; background:#08080E; border:1px solid #1E1E2C; border-radius:5px; padding:5px 8px;">
+                <code style="font-size:11px; color:#E2E8F0; font-family:var(--font-mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">zoth-second-brain audit</code>
+                <button class="btn btn-outlined" onclick="copyCliCommand('zoth-second-brain audit')" style="padding:2px 8px; font-size:10px; border-color:rgba(16,185,129,0.4); color:#10B981; cursor:pointer; flex-shrink:0;">📋 Copy</button>
+              </div>
+            </div>
+
+            <!-- 7. render all -->
+            <div class="cli-cmd-card" data-command="render" data-tag="Spec Tools" data-desc="Knap-style Structured Data-to-Obsidian Note Compiler (vaelor, memory, all)" style="background:#0F0F18; border:1px solid #28283C; border-radius:8px; padding:12px; display:flex; flex-direction:column; justify-content:space-between; gap:10px;">
+              <div>
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                  <span style="font-family:var(--font-mono); font-size:12.5px; font-weight:700; color:#EC4899;">zoth-second-brain render all</span>
+                  <span style="font-size:9.5px; color:#EC4899; background:rgba(236,72,153,0.1); border:1px solid rgba(236,72,153,0.25); padding:1px 6px; border-radius:4px;">Knap Compiler</span>
+                </div>
+                <div style="font-size:11.5px; color:#94A3B8; line-height:1.45;">Knap-style Structured Data-to-Obsidian Note Compiler generating live telemetry digests in 05-Telemetry/.</div>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; background:#08080E; border:1px solid #1E1E2C; border-radius:5px; padding:5px 8px;">
+                <code style="font-size:11px; color:#E2E8F0; font-family:var(--font-mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">zoth-second-brain render all</code>
+                <button class="btn btn-outlined" onclick="copyCliCommand('zoth-second-brain render all')" style="padding:2px 8px; font-size:10px; border-color:rgba(236,72,153,0.4); color:#EC4899; cursor:pointer; flex-shrink:0;">📋 Copy</button>
+              </div>
+            </div>
+
+            <!-- 8. wiki <topic> -->
+            <div class="cli-cmd-card" data-command="wiki" data-tag="Spec Tools" data-desc="Synthesize a Karpathy-style canonical LLM Wiki page in 06-Wiki/" style="background:#0F0F18; border:1px solid #28283C; border-radius:8px; padding:12px; display:flex; flex-direction:column; justify-content:space-between; gap:10px;">
+              <div>
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                  <span style="font-family:var(--font-mono); font-size:12.5px; font-weight:700; color:#E879F9;">zoth-second-brain wiki &lt;topic&gt;</span>
+                  <span style="font-size:9.5px; color:#E879F9; background:rgba(232,121,249,0.1); border:1px solid rgba(232,121,249,0.25); padding:1px 6px; border-radius:4px;">Karpathy Wiki</span>
+                </div>
+                <div style="font-size:11.5px; color:#94A3B8; line-height:1.45;">Synthesize a Karpathy-style canonical LLM Wiki page in 06-Wiki/ with callout executive summary.</div>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; background:#08080E; border:1px solid #1E1E2C; border-radius:5px; padding:5px 8px;">
+                <code style="font-size:11px; color:#E2E8F0; font-family:var(--font-mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">zoth-second-brain wiki "Quantum Lattice Cryptography"</code>
+                <button class="btn btn-outlined" onclick="copyCliCommand('zoth-second-brain wiki &quot;Quantum Lattice Cryptography&quot;')" style="padding:2px 8px; font-size:10px; border-color:rgba(232,121,249,0.4); color:#E879F9; cursor:pointer; flex-shrink:0;">📋 Copy</button>
+              </div>
+            </div>
+
+            <!-- 9. dream -->
+            <div class="cli-cmd-card" data-command="dream" data-tag="Memory" data-desc="Trigger hippocampal sleep consolidation (:8094) & discover cross-cluster links" style="background:#0F0F18; border:1px solid #28283C; border-radius:8px; padding:12px; display:flex; flex-direction:column; justify-content:space-between; gap:10px;">
+              <div>
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                  <span style="font-family:var(--font-mono); font-size:12.5px; font-weight:700; color:#A855F7;">zoth-second-brain dream</span>
+                  <span style="font-size:9.5px; color:#A855F7; background:rgba(168,85,247,0.1); border:1px solid rgba(168,85,247,0.25); padding:1px 6px; border-radius:4px;">Memory</span>
+                </div>
+                <div style="font-size:11.5px; color:#94A3B8; line-height:1.45;">Trigger hippocampal sleep consolidation (:8094) &amp; discover latent cross-cluster associative links.</div>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; background:#08080E; border:1px solid #1E1E2C; border-radius:5px; padding:5px 8px;">
+                <code style="font-size:11px; color:#E2E8F0; font-family:var(--font-mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">zoth-second-brain dream</code>
+                <button class="btn btn-outlined" onclick="copyCliCommand('zoth-second-brain dream')" style="padding:2px 8px; font-size:10px; border-color:rgba(168,85,247,0.4); color:#A855F7; cursor:pointer; flex-shrink:0;">📋 Copy</button>
+              </div>
+            </div>
+
+            <!-- 10. graph -->
+            <div class="cli-cmd-card" data-command="graph" data-tag="Diagnostics" data-desc="Analyze wikilink degree centrality & export 05-Telemetry/obsidian_graph_topology.json" style="background:#0F0F18; border:1px solid #28283C; border-radius:8px; padding:12px; display:flex; flex-direction:column; justify-content:space-between; gap:10px;">
+              <div>
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                  <span style="font-family:var(--font-mono); font-size:12.5px; font-weight:700; color:#6366F1;">zoth-second-brain graph</span>
+                  <span style="font-size:9.5px; color:#6366F1; background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.25); padding:1px 6px; border-radius:4px;">Network Topology</span>
+                </div>
+                <div style="font-size:11.5px; color:#94A3B8; line-height:1.45;">Analyze wikilink degree centrality &amp; export 05-Telemetry/obsidian_graph_topology.json.</div>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; background:#08080E; border:1px solid #1E1E2C; border-radius:5px; padding:5px 8px;">
+                <code style="font-size:11px; color:#E2E8F0; font-family:var(--font-mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">zoth-second-brain graph</code>
+                <button class="btn btn-outlined" onclick="copyCliCommand('zoth-second-brain graph')" style="padding:2px 8px; font-size:10px; border-color:rgba(99,102,241,0.4); color:#6366F1; cursor:pointer; flex-shrink:0;">📋 Copy</button>
+              </div>
+            </div>
+
+            <!-- 11. daily --append "..." -->
+            <div class="cli-cmd-card" data-command="daily" data-tag="Journal" data-desc="Generate or append to today's Daily Sovereign Note in 07-Daily/" style="background:#0F0F18; border:1px solid #28283C; border-radius:8px; padding:12px; display:flex; flex-direction:column; justify-content:space-between; gap:10px;">
+              <div>
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                  <span style="font-family:var(--font-mono); font-size:12.5px; font-weight:700; color:#D4AF37;">zoth-second-brain daily [--append]</span>
+                  <span style="font-size:9.5px; color:#D4AF37; background:rgba(212,175,55,0.1); border:1px solid rgba(212,175,55,0.25); padding:1px 6px; border-radius:4px;">Daily Journal</span>
+                </div>
+                <div style="font-size:11.5px; color:#94A3B8; line-height:1.45;">Generate or append to today's Daily Sovereign Note in 07-Daily/ with auto-sync to :8094.</div>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; background:#08080E; border:1px solid #1E1E2C; border-radius:5px; padding:5px 8px;">
+                <code style="font-size:11px; color:#E2E8F0; font-family:var(--font-mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">zoth-second-brain daily --append "Completed Wave 24 integration"</code>
+                <button class="btn btn-outlined" onclick="copyCliCommand('zoth-second-brain daily --append &quot;Completed Wave 24 integration&quot;')" style="padding:2px 8px; font-size:10px; border-color:rgba(212,175,55,0.4); color:#D4AF37; cursor:pointer; flex-shrink:0;">📋 Copy</button>
+              </div>
+            </div>
+
+            <!-- 12. bundle -->
+            <div class="cli-cmd-card" data-command="bundle" data-tag="Spec Tools" data-desc="Compile and export portable SHA-256 verified knowledge bundle" style="background:#0F0F18; border:1px solid #28283C; border-radius:8px; padding:12px; display:flex; flex-direction:column; justify-content:space-between; gap:10px;">
+              <div>
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                  <span style="font-family:var(--font-mono); font-size:12.5px; font-weight:700; color:#10B981;">zoth-second-brain bundle</span>
+                  <span style="font-size:9.5px; color:#10B981; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.25); padding:1px 6px; border-radius:4px;">Spec Tools</span>
+                </div>
+                <div style="font-size:11.5px; color:#94A3B8; line-height:1.45;">Compile and export portable SHA-256 verified knowledge bundle to 05-Telemetry/second_brain_bundle.json.</div>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; background:#08080E; border:1px solid #1E1E2C; border-radius:5px; padding:5px 8px;">
+                <code style="font-size:11px; color:#E2E8F0; font-family:var(--font-mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">zoth-second-brain bundle</code>
+                <button class="btn btn-outlined" onclick="copyCliCommand('zoth-second-brain bundle')" style="padding:2px 8px; font-size:10px; border-color:rgba(16,185,129,0.4); color:#10B981; cursor:pointer; flex-shrink:0;">📋 Copy</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Maps of Content (MOCs) Notes Inspector -->
         <div style="margin-top:16px;">
           <div style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:0.6px; color:#00E5FF; margin-bottom:10px;">
@@ -6085,6 +6299,49 @@ curl -X POST http://127.0.0.1:8788/api/recall \
       } catch (err) {
         showToast(`Auto-linker network error: ${err.message}`, 'error');
       }
+    }
+
+    function copyCliCommand(cmd) {
+      if (!cmd) return;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(cmd).then(() => {
+          showToast(`📋 Copied: "${cmd}"`, 'success');
+        }).catch(() => {
+          prompt('Copy command:', cmd);
+        });
+      } else {
+        prompt('Copy command:', cmd);
+      }
+    }
+
+    function filterCliCommands(query) {
+      const q = (query || '').toLowerCase().trim();
+      const cards = document.querySelectorAll('#cli-commands-grid .cli-cmd-card');
+      cards.forEach(card => {
+        const cmd = (card.getAttribute('data-command') || '').toLowerCase();
+        const desc = (card.getAttribute('data-desc') || '').toLowerCase();
+        const tag = (card.getAttribute('data-tag') || '').toLowerCase();
+        if (!q || cmd.includes(q) || desc.includes(q) || tag.includes(q)) {
+          card.style.display = '';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    }
+
+    function filterCliCommandsTag(tag) {
+      const input = document.getElementById('cli-palette-filter');
+      if (input) input.value = '';
+      const t = (tag || '').toLowerCase().trim();
+      const cards = document.querySelectorAll('#cli-commands-grid .cli-cmd-card');
+      cards.forEach(card => {
+        const cardTag = (card.getAttribute('data-tag') || '').toLowerCase();
+        if (t === 'all' || !t || cardTag.includes(t)) {
+          card.style.display = '';
+        } else {
+          card.style.display = 'none';
+        }
+      });
     }
 
     async function fetchObsidianBases() {

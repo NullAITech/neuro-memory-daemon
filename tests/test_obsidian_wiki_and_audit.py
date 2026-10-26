@@ -522,14 +522,14 @@ def test_mcp_obsidian_doctor_audit(obsidian_server: tuple[MemoryUIServer, str, M
 
 
 def test_api_mcp_tools_get(obsidian_server: tuple[MemoryUIServer, str, MemoryDaemon]):
-    """Test GET /api/mcp/tools returns list of 17 registered tools."""
+    """Test GET /api/mcp/tools returns list of 18 registered tools."""
     _, base_url, _ = obsidian_server
     status, _, body = _http_get(f"{base_url}/api/mcp/tools")
     assert status == 200
     data = json.loads(body.decode("utf-8"))
     assert data["ok"] is True
-    assert data["count"] == 17
-    assert len(data["tools"]) == 17
+    assert data["count"] == 18
+    assert len(data["tools"]) == 18
     tool_names = [t["name"] for t in data["tools"]]
     assert "obsidian_doctor_audit" in tool_names
     assert "obsidian_vault_search" in tool_names
@@ -537,6 +537,7 @@ def test_api_mcp_tools_get(obsidian_server: tuple[MemoryUIServer, str, MemoryDae
     assert "obsidian_canvas_generate" in tool_names
     assert "obsidian_daily_log" in tool_names
     assert "obsidian_backlinks_inspect" in tool_names
+    assert "obsidian_bundle_export" in tool_names
     assert "memory_store" in tool_names
     assert "memory_recall" in tool_names
 
@@ -903,6 +904,53 @@ def test_mcp_obsidian_backlinks_inspect(obsidian_server: tuple[MemoryUIServer, s
     assert http_data["tool"] == "obsidian_backlinks_inspect"
     assert http_data["result"]["note"]["title"] == "Zoth OS"
     assert http_data["result"]["backlinksCount"] >= 1000
+
+
+def test_mcp_obsidian_bundle_export(obsidian_server: tuple[MemoryUIServer, str, MemoryDaemon]):
+    """Test obsidian_bundle_export MCP tool via JSON-RPC and HTTP API."""
+    _, base_url, daemon = obsidian_server
+    mcp = MCPServer(daemon=daemon)
+    assert "obsidian_bundle_export" in mcp.tools
+
+    # 1. Direct MCP JSON-RPC call
+    req = {
+        "jsonrpc": "2.0",
+        "id": 501,
+        "method": "tools/call",
+        "params": {
+            "name": "obsidian_bundle_export",
+            "arguments": {
+                "refresh": False
+            }
+        }
+    }
+    resp = mcp.handle_request(req)
+    assert resp is not None
+    assert not resp["result"].get("isError", False)
+    content = json.loads(resp["result"]["content"][0]["text"])
+    assert content["ok"] is True
+    assert content["healthScore"] == 100
+    assert content["version"] == "1.0.0"
+    assert len(content["bundleSha256"]) == 64
+    assert content["wikiCount"] >= 6
+    assert content["canvasesCount"] >= 14
+    assert content["basesCount"] >= 18
+    assert len(content["topHubs"]) >= 5
+
+    # 2. HTTP POST /api/mcp/call invocation
+    status, _, body = _http_post(f"{base_url}/api/mcp/call", {
+        "name": "obsidian_bundle_export",
+        "arguments": {}
+    })
+    assert status == 200
+    http_data = json.loads(body.decode("utf-8"))
+    assert http_data["ok"] is True
+    assert http_data["tool"] == "obsidian_bundle_export"
+    assert http_data["result"]["ok"] is True
+    assert http_data["result"]["healthScore"] == 100
+    assert len(http_data["result"]["bundleSha256"]) == 64
+    assert "auditMetrics" in http_data["result"]
+
 
 
 

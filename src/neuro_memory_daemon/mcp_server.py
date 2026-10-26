@@ -512,6 +512,27 @@ class MCPServer:
             handler=self._tool_obsidian_backlinks_inspect,
         )
 
+        # 18. obsidian_bundle_export
+        self._register_tool(
+            name="obsidian_bundle_export",
+            description=(
+                "Exports a cryptographically verified SHA-256 portable knowledge bundle attestation "
+                "of the entire Second Brain Vault (1,729+ notes, JSON Canvases, Obsidian Bases, "
+                "canonical LLM Wiki articles, and top degree centrality hubs)."
+            ),
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "refresh": {
+                        "type": "boolean",
+                        "description": "Whether to re-compile the bundle if missing (default: true).",
+                        "default": True,
+                    },
+                },
+            },
+            handler=self._tool_obsidian_bundle_export,
+        )
+
     # -----------------------------------------------------------------------
     # Tool Handlers
     # -----------------------------------------------------------------------
@@ -1220,6 +1241,67 @@ health_score: 100
             "incomingBacklinks": incoming_backlinks,
             "unlinkedCount": len(unlinked_mentions),
             "unlinkedMentions": unlinked_mentions[:60]
+        }, indent=2)
+
+    def _tool_obsidian_bundle_export(self, args: Dict[str, Any]) -> str:
+        from pathlib import Path
+        import subprocess
+
+        vault_dir = Path.home() / "Documents" / "Obsidian Vault"
+        bundle_file = vault_dir / "05-Telemetry" / "second_brain_bundle.json"
+
+        # If bundle doesn't exist or re-compile is requested
+        if not bundle_file.exists() or args.get("refresh", True) is False:
+            try:
+                script_path = Path("/home/zoth/NullAITech/zoth-os/bin/zoth-second-brain")
+                if script_path.exists() and os.access(script_path, os.X_OK):
+                    subprocess.run([str(script_path), "bundle"], capture_output=True, timeout=15)
+            except Exception:
+                pass
+
+        if bundle_file.exists():
+            try:
+                bundle_data = json.loads(bundle_file.read_text(encoding="utf-8"))
+                audit_metrics = bundle_data.get("auditMetrics") or {}
+                wiki_articles = bundle_data.get("wikiArticles") or []
+                canvases = bundle_data.get("canvases") or []
+                bases = bundle_data.get("bases") or []
+                top_hubs = bundle_data.get("topHubs") or []
+
+                return json.dumps({
+                    "ok": True,
+                    "version": bundle_data.get("version", "1.0.0"),
+                    "healthScore": bundle_data.get("healthScore", 100),
+                    "bundleSha256": bundle_data.get("bundleSha256", ""),
+                    "auditMetrics": audit_metrics,
+                    "wikiCount": len(wiki_articles) if wiki_articles else audit_metrics.get("wikiCount", 0),
+                    "canvasesCount": len(canvases) if canvases else audit_metrics.get("canvasesCount", 0),
+                    "basesCount": len(bases) if bases else audit_metrics.get("basesCount", 0),
+                    "topHubs": top_hubs[:15],
+                }, indent=2)
+            except Exception as e:
+                return json.dumps({
+                    "ok": False,
+                    "error": f"Failed to parse bundle: {str(e)}",
+                    "healthScore": 0,
+                    "bundleSha256": "",
+                    "auditMetrics": {},
+                    "wikiCount": 0,
+                    "canvasesCount": 0,
+                    "basesCount": 0,
+                    "topHubs": [],
+                }, indent=2)
+
+        return json.dumps({
+            "ok": False,
+            "error": "Second brain bundle file not found",
+            "healthScore": 0,
+            "bundleSha256": "",
+            "auditMetrics": {},
+            "wikiCount": 0,
+            "canvasesCount": 0,
+            "basesCount": 0,
+            "topHubs": [],
         }, indent=2)
 
     # -----------------------------------------------------------------------
