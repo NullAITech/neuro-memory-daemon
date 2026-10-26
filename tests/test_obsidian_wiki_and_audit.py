@@ -11,6 +11,7 @@ from typing import Generator
 import pytest
 
 from neuro_memory_daemon import MemoryDaemon
+from neuro_memory_daemon.mcp_server import MCPServer
 from neuro_memory_daemon.ui_server import MemoryUIServer, start_server_in_thread, _parse_wiki_article
 from tests.test_ui_server import get_free_port, _http_get, _http_post
 
@@ -407,6 +408,118 @@ def test_obsidian_graph_get(obsidian_server: tuple[MemoryUIServer, str, MemoryDa
     assert "totalDegree" in first_hub
     assert "cluster" in first_hub
     assert first_hub["totalDegree"] >= first_hub["inDegree"]
+
+
+def test_mcp_obsidian_vault_search(obsidian_server: tuple[MemoryUIServer, str, MemoryDaemon]):
+    """Test MCP tool obsidian_vault_search via JSON-RPC."""
+    _, _, daemon = obsidian_server
+    mcp = MCPServer(daemon=daemon)
+    assert "obsidian_vault_search" in mcp.tools
+
+    req = {
+        "jsonrpc": "2.0",
+        "id": 101,
+        "method": "tools/call",
+        "params": {
+            "name": "obsidian_vault_search",
+            "arguments": {"query": "Vaelor", "limit": 5}
+        }
+    }
+    resp = mcp.handle_request(req)
+    assert resp is not None
+    assert not resp["result"].get("isError", False)
+    content = json.loads(resp["result"]["content"][0]["text"])
+    assert content["ok"] is True
+    assert content["query"] == "Vaelor"
+    assert content["vaultCount"] > 0
+    assert "vaultMatches" in content
+
+
+def test_mcp_obsidian_wiki_synthesize(obsidian_server: tuple[MemoryUIServer, str, MemoryDaemon]):
+    """Test MCP tool obsidian_wiki_synthesize via JSON-RPC."""
+    _, _, daemon = obsidian_server
+    mcp = MCPServer(daemon=daemon)
+    assert "obsidian_wiki_synthesize" in mcp.tools
+
+    req = {
+        "jsonrpc": "2.0",
+        "id": 102,
+        "method": "tools/call",
+        "params": {
+            "name": "obsidian_wiki_synthesize",
+            "arguments": {"topic": "Vaelor Account-Lattice & PoUW Protocol"}
+        }
+    }
+    resp = mcp.handle_request(req)
+    assert resp is not None
+    assert not resp["result"].get("isError", False)
+    content = json.loads(resp["result"]["content"][0]["text"])
+    assert content["ok"] is True
+    assert content["status"] == "synthesized"
+    assert "Vaelor" in content["article"]["title"]
+
+
+def test_mcp_obsidian_canvas_generate(obsidian_server: tuple[MemoryUIServer, str, MemoryDaemon]):
+    """Test MCP tool obsidian_canvas_generate via JSON-RPC."""
+    _, _, daemon = obsidian_server
+    mcp = MCPServer(daemon=daemon)
+    assert "obsidian_canvas_generate" in mcp.tools
+
+    req = {
+        "jsonrpc": "2.0",
+        "id": 103,
+        "method": "tools/call",
+        "params": {
+            "name": "obsidian_canvas_generate",
+            "arguments": {"topic": "Wave 16 MCP Test Canvas"}
+        }
+    }
+    resp = mcp.handle_request(req)
+    assert resp is not None
+    assert not resp["result"].get("isError", False)
+    content = json.loads(resp["result"]["content"][0]["text"])
+    assert content["ok"] is True
+    assert "canvas" in content
+    canvas = content["canvas"]
+    assert canvas["nodeCount"] >= 3
+    assert canvas["edgeCount"] >= 2
+
+    # Cleanup generated canvas file
+    vault_dir = Path.home() / "Documents" / "Obsidian Vault"
+    canvas_file = vault_dir / canvas["name"]
+    try:
+        if canvas_file.exists():
+            canvas_file.unlink()
+    except Exception:
+        pass
+
+
+def test_mcp_obsidian_doctor_audit(obsidian_server: tuple[MemoryUIServer, str, MemoryDaemon]):
+    """Test MCP tool obsidian_doctor_audit via JSON-RPC."""
+    _, _, daemon = obsidian_server
+    mcp = MCPServer(daemon=daemon)
+    assert "obsidian_doctor_audit" in mcp.tools
+
+    req = {
+        "jsonrpc": "2.0",
+        "id": 104,
+        "method": "tools/call",
+        "params": {
+            "name": "obsidian_doctor_audit",
+            "arguments": {}
+        }
+    }
+    resp = mcp.handle_request(req)
+    assert resp is not None
+    assert not resp["result"].get("isError", False)
+    content = json.loads(resp["result"]["content"][0]["text"])
+    assert content["ok"] is True
+    assert content["score"] == 100
+    assert content["healthGrade"] == "✦ PERFECT"
+    assert content["totalCanvases"] >= 14
+    assert content["totalBases"] >= 18
+    assert "topHubs" in content
+
 
 
 

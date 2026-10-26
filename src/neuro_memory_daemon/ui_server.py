@@ -907,6 +907,16 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
             self._send_json(result)
             return
 
+        # MCP Tools Discovery over HTTP (GET)
+        elif path in ("/api/mcp/tools", "/v1/mcp/tools"):
+            try:
+                from .mcp_server import MCPServer
+            except ImportError:
+                from neuro_memory_daemon.mcp_server import MCPServer
+            mcp = MCPServer(daemon=daemon)
+            self._send_json({"ok": True, "count": len(mcp.tools), "tools": list(mcp.tools.values())})
+            return
+
         # Serve Static UI Files
         self._serve_static(path)
 
