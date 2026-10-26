@@ -317,7 +317,7 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
 
         if not target_base:
             # Default to Zoth 71 Sovereign Tools.base or first base
-            target_base = next((b for b in all_bases if "Tools" in b.name), all_bases[0] if all_bases else None)
+            target_base = next((b for b in all_bases if "71 Sovereign Tools" in b.name or "Sovereign Tools" in b.name), next((b for b in all_bases if "Tools" in b.name), all_bases[0] if all_bases else None))
 
         if not target_base or not target_base.is_file():
             return {"ok": False, "error": f"Base '{base_name}' not found", "totalMatched": 0, "columns": [], "rows": []}
@@ -2249,6 +2249,8 @@ health_score: 100
                 "Zoth Autonomous Agents.base",
                 "Zoth LLM Wiki Index.base",
                 "Vaelor Ecosystem & Patronage Ledger.base",
+                "Sovereign MCP Tools & Agent Catalog.base",
+                "ZothOS & Studio Supply-Chain Trust Stack.canvas",
             ):
                 art_file = vault_dir / artifact_name
                 if art_file.exists():

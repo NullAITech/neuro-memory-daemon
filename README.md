@@ -13,11 +13,12 @@
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-0%20external-brightgreen.svg)](pyproject.toml)
 [![MCP Native](https://img.shields.io/badge/MCP-21%20Tools%20Active-orange.svg)](https://modelcontextprotocol.io/)
 [![REST API](https://img.shields.io/badge/REST-28%20Endpoints-blue.svg)](http://127.0.0.1:8094/)
-[![Obsidian Second Brain](https://img.shields.io/badge/Obsidian-1%2C732%20Notes%20%E2%80%A2%2017%20Canvases%20%E2%80%A2%2018%20Bases-purple.svg)](docs/)
+[![Obsidian Second Brain](https://img.shields.io/badge/Obsidian-1%2C732%20Notes%20%E2%80%A2%2018%20Canvases%20%E2%80%A2%2020%20Bases-purple.svg)](docs/)
 [![Second Brain Health](https://img.shields.io/badge/health-100%2F100%20%E2%9C%A6%20PERFECT-brightgreen.svg)](docs/)
+[![Vault Connectivity](https://img.shields.io/badge/connectivity-100.0%25%20(0%20orphans)-brightgreen.svg)](docs/)
 
 > **Cognitive neuroscience-inspired persistent memory daemon, 3D Netrunner Cyber-Cortex, 28 REST endpoints, and 21-tool Model Context Protocol (MCP) server for autonomous AI agents, swarms, IDEs, and Obsidian Second Brain vaults.**  
-> Features **Spike-Timing-Dependent Plasticity (STDP)**, **Hippocampal CA3/CA1 Pattern Completion**, **Ebbinghaus Forgetting Curves**, a **6-Galaxy 3D Netrunner Cosmos** with full cyber-cortex controls (`focusNodeByQuery`, `export3DSubstrateSnapshot`, 8-stop Galaxy Tour, 5-state Neuromodulator Aura Switcher, Hippocampal Dream Replay Wave, and Salience Scrubber), and native **Obsidian Second Brain bidirectional synchronization** (1,732 vault notes, 17 JSON Canvases, 18 Obsidian Bases, 13 Karpathy LLM Wiki articles, 100/100 Doctor health score). Zero third-party runtime dependencies (100% Python standard library).
+> Features **Spike-Timing-Dependent Plasticity (STDP)**, **Hippocampal CA3/CA1 Pattern Completion**, **Ebbinghaus Forgetting Curves**, a **6-Galaxy 3D Netrunner Cosmos** with full cyber-cortex controls (`focusNodeByQuery`, `export3DSubstrateSnapshot`, 8-stop Galaxy Tour, 5-state Neuromodulator Aura Switcher, Hippocampal Dream Replay Wave, and Salience Scrubber), and native **Obsidian Second Brain bidirectional synchronization** (1,732 vault notes, 18 JSON Canvases, 20 Obsidian Bases, 13 Karpathy LLM Wiki articles, 100.0% graph connectivity with 0 orphan notes, 100/100 Doctor health score). Zero third-party runtime dependencies (100% Python standard library).
 
 ---
 
@@ -56,7 +57,7 @@
 - ⚡ **Spike-Timing-Dependent Plasticity (STDP)**: Dynamic Hebbian synaptic weight adjustment between entities based on co-occurrence, causal timing, and dopamine reward prediction errors (RPE).
 - 🧩 **Hippocampal CA3/CA1 Auto-Associative Recall**: Reconstructs complete memory engrams from partial, degraded query cues while preventing catastrophic interference via pattern separation.
 - 🌌 **3D Netrunner Cyber-Cortex & 6-Galaxy Cosmos**: Real-time WebGL/Three.js interactive neural cosmos with curved Bezier synaptic filaments, 8-stop cinematic tour, 5-state neuromodulator aura switcher, `focusNodeByQuery` target framing, and `export3DSubstrateSnapshot` attestation downloads.
-- 💎 **Deep Obsidian Second Brain Integration**: Native bidirectional synchronization with 1,732 Obsidian Flavored Markdown notes, 17 JSON Canvas 1.0 (`.canvas`), 18 Obsidian Bases (`.base`), and 13 Karpathy-style canonical LLM Wikis (100/100 Doctor health score).
+- 💎 **Deep Obsidian Second Brain Integration**: Native bidirectional synchronization with 1,732 Obsidian Flavored Markdown notes, 18 JSON Canvas 1.0 (`.canvas`), 20 Obsidian Bases (`.base`), and 13 Karpathy-style canonical LLM Wikis (100.0% connectivity, 0 orphan notes, 100/100 Doctor health score).
 - 🔌 **Comprehensive 21-Tool MCP Server & JSON-RPC 2.0 Dispatcher**: Full stdio and HTTP JSON-RPC 2.0 server (`POST /api/mcp`) providing 11 Cognitive STDP tools and 10 Obsidian Second Brain & Vaelor L1 tools (including tool #21 `obsidian_vaelor_pouw`).
 - 🌐 **28 High-Performance REST Endpoints**: Production endpoints covering cognitive memory recall, 3D substrate SSE streaming, note reading/writing with fixed-root confinement, and Vaelor PoUW cognitive mining.
 - 🧠 **DLPFC Working Memory Buffer**: High-speed bounded LRU buffer (Miller's Law $7 \pm 2$ capacity) for active conversational scratchpad tracking.
@@ -317,10 +318,10 @@ mcp_servers:
 
 The daemon serves as the real-time cognitive coprocessor for Neal Frazier's Obsidian Second Brain vault (`/home/zoth/Documents/Obsidian Vault/`), enforcing strict adherence to official `@kepano` Obsidian specifications:
 - **Obsidian Flavored Markdown (OFM)**: Native wikilinks (`[[Note Name]]`), section anchors (`[[Note#Heading]]`), callouts (`> [!NOTE]`), and frontmatter properties (1,732 indexed notes).
-- **JSON Canvas 1.0 (`.canvas`)**: Strict JSON node and edge coordinate schemas (17 verified canvases in vault).
-- **Obsidian Bases (`.base`)**: Structured database schemas with YAML frontmatter, custom filters, and computed formulas (18 verified bases in vault).
+- **JSON Canvas 1.0 (`.canvas`)**: Strict JSON node and edge coordinate schemas (18 verified canvases in vault).
+- **Obsidian Bases (`.base`)**: Structured database schemas with YAML frontmatter, custom filters, and computed formulas (20 verified bases in vault).
 - **Karpathy-Style LLM Wiki**: 13 canonical encyclopedic synthesis pages stored in `06-Wiki/` linking architecture concepts with bidirectional STDP memory engrams.
-- **Doctor Health Score**: Verified at **100/100 ✦ PERFECT** (0 broken canvases, 0 broken bases, 0 dangling links).
+- **Doctor Health Score**: Verified at **100/100 ✦ PERFECT** (0 broken canvases, 0 broken bases, 0 dangling links, 0 orphan notes, 100.0% connectivity).
 
 ### Obsidian Second Brain REST API Reference Table
 
@@ -329,14 +330,14 @@ The UI server exposes 28 clean REST endpoints on port `8788` (or `8094` in daemo
 | Method | Endpoint | Query / Body Parameters | Functional Description |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/health` | _None_ | Subsystem health check and daemon uptime verification. |
-| `GET` | `/api/obsidian/status` | _None_ | Vault metadata: 1,732 notes, 17 canvases, 18 bases, wikilinks, and graph connectivity. |
+| `GET` | `/api/obsidian/status` | _None_ | Vault metadata: 1,732 notes, 18 canvases, 20 bases, wikilinks, and graph connectivity. |
 | `GET` | `/api/obsidian/vault` | _None_ | Full JSON dump of indexed vault notes, MOCs, and wikilink graph edges. |
 | `GET` | `/api/obsidian/search` | `q`, `folder`, `limit` | Full-text search across all 1,732 vault markdown notes. |
 | `POST` | `/api/obsidian/search` | `{"query": "...", "folder": "...", "limit": 20}` | Rich POST search supporting complex query phrases and folder filtering. |
 | `POST` | `/api/obsidian/sync` | `{"force": true}` | Bidirectional synchronization between vault notes and Neuro-Memory STDP engrams. |
-| `GET` | `/api/obsidian/canvases`| _None_ | List all 17 JSON Canvas 1.0 architecture maps with node and edge counts. |
+| `GET` | `/api/obsidian/canvases`| _None_ | List all 18 JSON Canvas 1.0 architecture maps with node and edge counts. |
 | `POST` | `/api/obsidian/canvas` | `{"topic": "...", "filename": "...", "max_nodes": 12}` | Procedurally generate an official JSON Canvas 1.0 map from vault notes and engrams. |
-| `GET` | `/api/obsidian/bases` | _None_ | List all 18 Obsidian Bases (`.base`) databases with views, filters, and row counts. |
+| `GET` | `/api/obsidian/bases` | _None_ | List all 20 Obsidian Bases (`.base`) databases with views, filters, and row counts. |
 | `GET` | `/api/obsidian/bases/records`| `base`, `filter`, `limit` | Query parsed table rows from any Obsidian Base database. |
 | `GET` | `/api/obsidian/wiki` | _None_ | List all 13 canonical Karpathy LLM Wiki synthesis articles in `06-Wiki/`. |
 | `POST` | `/api/obsidian/wiki` | `{"topic": "...", "folder": "06-Wiki", "title": "..."}` | Synthesize a new Karpathy LLM Wiki note linking concepts with memory engrams. |
