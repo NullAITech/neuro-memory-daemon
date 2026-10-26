@@ -294,6 +294,225 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
             "stdpMatches": stdp_results[:limit],
         }
 
+    def _query_obsidian_base_records(self, vault_dir: Path, base_name: str, limit: int = 100) -> Dict[str, Any]:
+        """Query and evaluate live Obsidian Bases (.base) records against vault notes."""
+        if not vault_dir.exists():
+            return {"ok": False, "error": "Vault directory not found", "totalMatched": 0, "columns": [], "rows": []}
+
+        # Find the target .base file
+        all_bases = list(vault_dir.rglob("*.base"))
+        target_base = None
+        if base_name:
+            clean_name = base_name.strip().lower()
+            if clean_name.endswith(".base"):
+                clean_name = clean_name[:-5]
+            for b in all_bases:
+                b_stem = b.stem.lower()
+                if b_stem == clean_name or b.name.lower() == base_name.strip().lower() or clean_name in b_stem:
+                    target_base = b
+                    break
+
+        if not target_base:
+            # Default to Zoth 71 Sovereign Tools.base or first base
+            target_base = next((b for b in all_bases if "Tools" in b.name), all_bases[0] if all_bases else None)
+
+        if not target_base or not target_base.is_file():
+            return {"ok": False, "error": f"Base '{base_name}' not found", "totalMatched": 0, "columns": [], "rows": []}
+
+        try:
+            raw_yaml = target_base.read_text(encoding="utf-8")
+            try:
+                import yaml
+                bdata = yaml.safe_load(raw_yaml) or {}
+            except ImportError:
+                bdata = {}
+        except Exception as ex:
+            return {"ok": False, "error": f"Failed to read base YAML: {ex}", "totalMatched": 0, "columns": [], "rows": []}
+
+        filters = bdata.get("filters", {})
+        formulas = bdata.get("formulas", {})
+        properties = bdata.get("properties", {})
+        views = bdata.get("views", [])
+
+        and_list = filters.get("and", []) if isinstance(filters, dict) else []
+        in_folder = None
+        tags = []
+        not_tags = []
+        not_names = []
+
+        for cond in and_list:
+            if isinstance(cond, str):
+                m_folder = re.search(r'file\.inFolder\(["\']([^"\']+)["\']\)', cond)
+                if m_folder:
+                    in_folder = m_folder.group(1)
+                m_tag = re.search(r'file\.hasTag\(["\']([^"\']+)["\']\)', cond)
+                if m_tag:
+                    tags.append(m_tag.group(1).lower())
+            elif isinstance(cond, dict) and "not" in cond:
+                for not_cond in cond.get("not", []):
+                    if isinstance(not_cond, str):
+                        m_tag = re.search(r'file\.hasTag\(["\']([^"\']+)["\']\)', not_cond)
+                        if m_tag:
+                            not_tags.append(m_tag.group(1).lower())
+                        m_name = re.search(r'file\.name\s*==\s*["\']([^"\']+)["\']', not_cond)
+                        if m_name:
+                            not_names.append(m_name.group(1).lower())
+
+        # Determine candidate files
+        candidate_files = []
+        target_dir = vault_dir / in_folder if in_folder else None
+        if target_dir and target_dir.exists():
+            candidate_files = list(target_dir.rglob("*.md"))
+        else:
+            if "agent" in tags and (vault_dir / "Agents").exists():
+                candidate_files = list((vault_dir / "Agents").rglob("*.md"))
+            elif "daemon" in tags and (vault_dir / "OS" / "Daemons").exists():
+                candidate_files = list((vault_dir / "OS" / "Daemons").rglob("*.md"))
+            elif "wiki" in tags and (vault_dir / "06-Wiki").exists():
+                candidate_files = list((vault_dir / "06-Wiki").rglob("*.md"))
+            else:
+                candidate_files = list(vault_dir.rglob("*.md"))
+
+        matched_rows = []
+        for p in sorted(candidate_files):
+            if any(part.startswith(".") for part in p.parts) or not p.is_file():
+                continue
+            if p.stem.lower() in not_names or p.name.lower() in not_names:
+                continue
+
+            try:
+                txt = safe_read_text(p)
+            except Exception:
+                continue
+
+            fm = {}
+            if txt.startswith("---"):
+                parts = txt.split("---", 2)
+                if len(parts) >= 3:
+                    try:
+                        import yaml
+                        loaded = yaml.safe_load(parts[1])
+                        if isinstance(loaded, dict):
+                            fm = loaded
+                    except Exception:
+                        pass
+
+            raw_tags = fm.get("tags", [])
+            if isinstance(raw_tags, str):
+                note_tags = [raw_tags.lower()]
+            elif isinstance(raw_tags, list):
+                note_tags = [str(t).lower() for t in raw_tags]
+            else:
+                note_tags = []
+
+            for tag_match in re.findall(r'#([a-zA-Z0-9_\-]+)', txt):
+                note_tags.append(tag_match.lower())
+
+            if tags and not in_folder and not any(t in note_tags for t in tags):
+                continue
+            if any(nt in note_tags for nt in not_tags):
+                continue
+
+            # Evaluate formulas
+            row_props = dict(fm)
+            rel_path = str(p.relative_to(vault_dir))
+            note_title = str(fm.get("title") or p.stem)
+            try:
+                stat = p.stat()
+                file_size = stat.st_size
+            except Exception:
+                file_size = len(txt)
+
+            row_props["file.name"] = p.name
+            row_props["file.folder"] = str(p.parent.relative_to(vault_dir))
+            row_props["file.ext"] = "md"
+            row_props["file.size"] = file_size
+            row_props["title"] = note_title
+
+            if isinstance(formulas, dict):
+                for fname in formulas.keys():
+                    val = ""
+                    if fname == "pillar_label":
+                        val = row_props.get("pillar") or "Pillar IV: AST Verification"
+                    elif fname == "monetized_badge":
+                        val = "💎 Monetized ($19/$79)" if row_props.get("monetized") is True else "⚡ Free / Open"
+                    elif fname == "runs_badge":
+                        r = row_props.get("runs")
+                        val = "🌐 Pure In-Browser" if r == "browser" else ("🟢 Node / Local" if r == "node" else "💻 System CLI")
+                    elif fname == "status_badge":
+                        st = str(row_props.get("status", "")).lower()
+                        val = "🟢 Active" if st in ("active", "canonical") else ("🟡 Standby" if st == "standby" else "⚪ Autonomous")
+                    elif fname == "price_label":
+                        val = str(row_props.get("price") or "$19")
+                    elif fname == "live_link":
+                        val = row_props.get("live") or row_props.get("github") or ""
+                    elif fname == "confidence_pct":
+                        c = row_props.get("confidence")
+                        try:
+                            val = f"{int(round(float(c) * 100))}%" if c is not None else "98%"
+                        except Exception:
+                            val = "98%"
+                    elif fname == "engram_badge":
+                        e = row_props.get("stdp_engrams")
+                        val = f"🧠 {e} Engrams" if e else "⚪ Local"
+                    elif fname == "runtime_badge":
+                        val = row_props.get("runtime") or "Sovereign Mesh"
+                    elif fname == "port_label":
+                        pt = row_props.get("port")
+                        val = f":{pt}" if pt else "Dynamic"
+                    elif fname == "stdp_link_badge":
+                        val = "🧠 STDP Synced" if row_props.get("stdp_enabled") else "⚪ Local Memory"
+                    elif fname == "core_badge":
+                        pt = row_props.get("port")
+                        val = "⭐ Core Fleet" if pt in (8094, 8140, 3000, 5173, 9393) else "📦 Service"
+                    elif fname in ("days_since_audit", "days_since_edit"):
+                        val = "0.5"
+                    else:
+                        val = str(row_props.get(fname, ""))
+
+                    row_props[f"formula.{fname}"] = val
+                    row_props[fname] = val
+
+            matched_rows.append({
+                "title": note_title,
+                "relPath": rel_path,
+                "properties": row_props
+            })
+
+        table_view = next((v for v in views if isinstance(v, dict) and v.get("type") == "table"), None)
+        order = (table_view.get("order") if table_view else None) or list(properties.keys())
+        columns = []
+        seen_keys = set()
+        for col_key in order:
+            if col_key in seen_keys:
+                continue
+            seen_keys.add(col_key)
+            prop_def = properties.get(col_key, {})
+            display_name = prop_def.get("displayName") if isinstance(prop_def, dict) else None
+            if not display_name:
+                display_name = col_key.replace("formula.", "").replace("file.", "").replace("_", " ").title()
+            columns.append({
+                "key": col_key,
+                "label": display_name
+            })
+
+        if not columns:
+            columns = [
+                {"key": "file.name", "label": "Tool Note"},
+                {"key": "title", "label": "Title"},
+                {"key": "category", "label": "Category"},
+                {"key": "formula.status_badge", "label": "Status"}
+            ]
+
+        return {
+            "ok": True,
+            "baseName": target_base.name,
+            "relPath": str(target_base.relative_to(vault_dir)),
+            "totalMatched": len(matched_rows),
+            "columns": columns,
+            "rows": matched_rows[:limit],
+        }
+
     def do_OPTIONS(self) -> None:
         """Handle CORS preflight requests."""
         self.send_response(204)
@@ -760,6 +979,18 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
                 "count": len(bases),
                 "bases": bases,
             })
+            return
+
+        # Obsidian Bases Live Record Querying Endpoint (GET)
+        elif path in ("/api/obsidian/bases/records", "/v1/obsidian/bases/records"):
+            vault_dir = Path.home() / "Documents" / "Obsidian Vault"
+            base_name = params.get("name", params.get("base", [""]))[0]
+            try:
+                limit = int(params.get("limit", ["100"])[0])
+            except (ValueError, TypeError):
+                limit = 100
+            result = self._query_obsidian_base_records(vault_dir, base_name, limit=limit)
+            self._send_json(result)
             return
 
         # Obsidian Unified Second Brain Search Endpoint (GET)

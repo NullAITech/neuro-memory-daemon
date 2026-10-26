@@ -2937,18 +2937,25 @@ curl -X POST http://127.0.0.1:8788/api/recall \
               <span class="wiki-tag-pill" style="color:#10B981; border-color:rgba(16,185,129,0.3);" id="base-stat-views">-- Views</span>
               <span class="wiki-tag-pill" style="color:#D4AF37; border-color:rgba(212,175,55,0.3);" id="base-stat-formulas">-- Formulas</span>
               <span class="wiki-tag-pill" style="color:#00E5FF; border-color:rgba(0,229,255,0.3);" id="base-stat-props">-- Properties</span>
+              <span class="wiki-tag-pill" style="color:#38BDF8; border-color:rgba(56,189,248,0.3);" id="base-stat-records">0 Records Matched</span>
               <span class="wiki-tag-pill" style="color:#E879F9; border-color:rgba(232,121,249,0.3);" id="base-stat-path">~/Documents/Obsidian Vault</span>
             </div>
 
-            <!-- Tabs: Views & Formulas vs Raw YAML -->
+            <!-- Tabs: Views & Formulas vs Live Records vs Raw YAML -->
             <div style="display:flex; gap:8px; margin-bottom:8px;">
               <button class="btn btn-outlined active" id="btn-base-tab-parsed" style="padding:4px 10px; font-size:11px;" onclick="switchBaseSubTab('parsed')">✦ Views &amp; Formulas</button>
+              <button class="btn btn-outlined" id="btn-base-tab-records" style="padding:4px 10px; font-size:11px;" onclick="switchBaseSubTab('records')">▦ Live Records</button>
               <button class="btn btn-outlined" id="btn-base-tab-yaml" style="padding:4px 10px; font-size:11px;" onclick="switchBaseSubTab('yaml')">≡ Raw YAML</button>
             </div>
 
             <!-- Parsed Container -->
             <div id="base-parsed-container" style="min-height:360px; max-height:480px; overflow-y:auto; border:1px solid #2A2A38; border-radius:10px; padding:14px; background:rgba(10,10,16,0.7); display:flex; flex-direction:column; gap:12px;">
               <!-- Views, formulas & properties rendered dynamically -->
+            </div>
+
+            <!-- Live Records Container -->
+            <div id="base-records-container" style="display:none; min-height:360px; max-height:480px; overflow-y:auto; overflow-x:auto; border:1px solid #2A2A38; border-radius:10px; padding:12px; background:rgba(10,10,16,0.7);">
+              <div style="font-size:12px; color:#9AA0A6; font-style:italic; text-align:center; padding:30px;">Loading live database records...</div>
             </div>
 
             <!-- Raw YAML Container -->
@@ -5791,24 +5798,142 @@ curl -X POST http://127.0.0.1:8788/api/recall \
       if (yamlPreview) {
         yamlPreview.innerText = b.rawYaml || '';
       }
+
+      // Live Database Records Querying
+      fetchBaseRecords(b.name);
     }
 
     function switchBaseSubTab(tab) {
       const btnParsed = document.getElementById('btn-base-tab-parsed');
+      const btnRecords = document.getElementById('btn-base-tab-records');
       const btnYaml = document.getElementById('btn-base-tab-yaml');
       const parsedCon = document.getElementById('base-parsed-container');
+      const recordsCon = document.getElementById('base-records-container');
       const yamlPre = document.getElementById('base-yaml-preview');
 
       if (tab === 'parsed') {
         if (btnParsed) btnParsed.classList.add('active');
+        if (btnRecords) btnRecords.classList.remove('active');
         if (btnYaml) btnYaml.classList.remove('active');
         if (parsedCon) parsedCon.style.display = 'flex';
+        if (recordsCon) recordsCon.style.display = 'none';
         if (yamlPre) yamlPre.style.display = 'none';
+      } else if (tab === 'records') {
+        if (btnParsed) btnParsed.classList.remove('active');
+        if (btnRecords) btnRecords.classList.add('active');
+        if (btnYaml) btnYaml.classList.remove('active');
+        if (parsedCon) parsedCon.style.display = 'none';
+        if (recordsCon) recordsCon.style.display = 'block';
+        if (yamlPre) yamlPre.style.display = 'none';
+        if (window.__activeBase) fetchBaseRecords(window.__activeBase.name);
       } else {
         if (btnParsed) btnParsed.classList.remove('active');
+        if (btnRecords) btnRecords.classList.remove('active');
         if (btnYaml) btnYaml.classList.add('active');
         if (parsedCon) parsedCon.style.display = 'none';
+        if (recordsCon) recordsCon.style.display = 'none';
         if (yamlPre) yamlPre.style.display = 'block';
+      }
+    }
+
+    async function fetchBaseRecords(baseName) {
+      const recordsCon = document.getElementById('base-records-container');
+      const recStat = document.getElementById('base-stat-records');
+      if (recStat) recStat.innerText = 'Querying records...';
+      if (recordsCon && recordsCon.style.display !== 'none') {
+        recordsCon.innerHTML = `
+          <div style="font-size:12px; color:#9AA0A6; font-style:italic; text-align:center; padding:30px;">
+            <span>⏳</span> Querying live database records for [[${escapeHtml(baseName || '')}]]...
+          </div>
+        `;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/api/obsidian/bases/records?name=${encodeURIComponent(baseName || '')}`);
+        if (!res.ok) {
+          if (recStat) recStat.innerText = 'Query error';
+          if (recordsCon) recordsCon.innerHTML = '<div style="color:#EF4444; font-size:12px; padding:20px;">Failed to fetch database records.</div>';
+          return;
+        }
+
+        const data = await res.json();
+        if (recStat) {
+          recStat.innerText = `${data.totalMatched} Records Matched`;
+        }
+
+        if (!recordsCon) return;
+
+        if (!data.rows || data.rows.length === 0) {
+          recordsCon.innerHTML = `
+            <div style="font-size:12px; color:#9AA0A6; font-style:italic; text-align:center; padding:30px;">
+              No matching records found for filter conditions in ${escapeHtml(data.baseName || '')}.
+            </div>
+          `;
+          return;
+        }
+
+        const cols = (data.columns && data.columns.length > 0) ? data.columns : [
+          { key: 'file.name', label: 'Note' },
+          { key: 'title', label: 'Title' },
+          { key: 'category', label: 'Category' },
+          { key: 'formula.status_badge', label: 'Status' }
+        ];
+
+        let tableHtml = `
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+            <div style="font-size:12px; font-weight:700; text-transform:uppercase; color:#38BDF8; letter-spacing:0.5px;">
+              ▦ Live Records Table: <span style="color:#F3F4F6;">${escapeHtml(data.baseName || '')}</span>
+            </div>
+            <div style="font-size:11px; font-family:var(--font-mono); color:#9AA0A6;">
+              Showing <span style="color:#10B981; font-weight:700;">${data.rows.length}</span> of <span style="color:#D4AF37; font-weight:700;">${data.totalMatched}</span> records
+            </div>
+          </div>
+          <div style="overflow-x:auto; border:1px solid #1E1E2C; border-radius:8px;">
+            <table style="width:100%; border-collapse:collapse; font-size:11.5px; text-align:left;">
+              <thead>
+                <tr style="background:#13131F; border-bottom:1px solid #232332;">
+                  ${cols.map(c => `
+                    <th style="padding:8px 10px; font-weight:700; text-transform:uppercase; font-size:10.5px; letter-spacing:0.4px; color:#9AA0A6; white-space:nowrap;">
+                      ${escapeHtml(c.label)}
+                    </th>
+                  `).join('')}
+                </tr>
+              </thead>
+              <tbody>
+                ${data.rows.map((row, idx) => {
+                  const bg = idx % 2 === 0 ? 'rgba(19,19,31,0.6)' : 'rgba(10,10,16,0.6)';
+                  return `
+                    <tr style="background:${bg}; border-bottom:1px solid #1E1E2C; transition:background 0.15s ease;" onmouseover="this.style.background='rgba(56,189,248,0.08)'" onmouseout="this.style.background='${bg}'">
+                      ${cols.map(c => {
+                        const val = row.properties ? (row.properties[c.key] ?? '') : '';
+                        let displayVal = escapeHtml(String(val));
+                        if (typeof val === 'string' && (val.includes('🟢') || val.includes('🟡') || val.includes('⚪') || val.includes('💎') || val.includes('⚡') || val.includes('🧠') || val.includes('🌐') || val.includes('⭐'))) {
+                          displayVal = `<span style="display:inline-block; font-size:10.5px; font-family:var(--font-mono); padding:1px 6px; border-radius:4px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);">${displayVal}</span>`;
+                        } else if (typeof val === 'string' && (val.startsWith('http://') || val.startsWith('https://'))) {
+                          displayVal = `<a href="${val}" target="_blank" rel="noopener" style="color:#38BDF8; text-decoration:none; display:inline-flex; align-items:center; gap:2px; font-family:var(--font-mono); font-size:10.5px;">Launch ↗</a>`;
+                        } else if (c.key === 'file.name' || c.key === 'title') {
+                          displayVal = `<span style="font-weight:600; color:#F3F4F6;">${displayVal}</span>`;
+                        }
+                        return `
+                          <td style="padding:6px 10px; vertical-align:middle; white-space:nowrap; color:#E0E0E0;">
+                            ${displayVal || '<span style="color:#555;">--</span>'}
+                          </td>
+                        `;
+                      }).join('')}
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+
+        recordsCon.innerHTML = tableHtml;
+      } catch (err) {
+        if (recStat) recStat.innerText = 'Network error';
+        if (recordsCon) {
+          recordsCon.innerHTML = `<div style="color:#EF4444; font-size:12px; padding:20px;">Network error querying records: ${escapeHtml(err.message)}</div>`;
+        }
       }
     }
 

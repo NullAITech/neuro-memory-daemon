@@ -578,6 +578,45 @@ def test_api_mcp_call_post(obsidian_server: tuple[MemoryUIServer, str, MemoryDae
     assert exc_info.value.code == 404
 
 
+def test_obsidian_bases_records_get(obsidian_server: tuple[MemoryUIServer, str, MemoryDaemon]):
+    """Test GET /api/obsidian/bases/records returns parsed base records."""
+    _, base_url, _ = obsidian_server
+
+    # 1. Query Zoth 71 Sovereign Tools.base
+    status, _, body = _http_get(f"{base_url}/api/obsidian/bases/records?name=Zoth%2071%20Sovereign%20Tools.base")
+    assert status == 200
+    data = json.loads(body.decode("utf-8"))
+    assert data["ok"] is True
+    assert data["baseName"] == "Zoth 71 Sovereign Tools.base"
+    assert data["totalMatched"] == 71
+    assert len(data["columns"]) >= 5
+    assert len(data["rows"]) == 71
+    first_row = data["rows"][0]
+    assert "title" in first_row
+    assert "relPath" in first_row
+    assert "properties" in first_row
+    props = first_row["properties"]
+    assert "file.name" in props
+    assert "pillar" in props or "category" in props
+    assert "formula.status_badge" in props
+
+    # 2. Query Zoth LLM Wiki Index.base
+    status, _, body = _http_get(f"{base_url}/api/obsidian/bases/records?name=Zoth%20LLM%20Wiki%20Index.base")
+    assert status == 200
+    wiki_data = json.loads(body.decode("utf-8"))
+    assert wiki_data["ok"] is True
+    assert wiki_data["totalMatched"] == 8
+    assert len(wiki_data["rows"]) == 8
+
+    # 3. Query without name defaults to tools
+    status, _, body = _http_get(f"{base_url}/api/obsidian/bases/records")
+    assert status == 200
+    default_data = json.loads(body.decode("utf-8"))
+    assert default_data["ok"] is True
+    assert default_data["totalMatched"] == 71
+
+
+
 
 
 
