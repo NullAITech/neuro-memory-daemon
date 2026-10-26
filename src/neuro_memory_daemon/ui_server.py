@@ -334,6 +334,61 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
             self._send_json(status)
             return
 
+        # Obsidian Second Brain & Official Skills Endpoint
+        elif path in ("/api/obsidian/vault", "/v1/obsidian/vault"):
+            vault_dir = Path.home() / "Documents" / "Obsidian Vault"
+            notes = []
+            canvases = []
+            bases = []
+            wikilink_edges = []
+            import re as _re
+            if vault_dir.exists():
+                for p in sorted(vault_dir.rglob("*")):
+                    if any(part.startswith(".") for part in p.parts) or not p.is_file():
+                        continue
+                    rel = str(p.relative_to(vault_dir))
+                    if p.suffix.lower() == ".md":
+                        txt = safe_read_text(p)
+                        links = _re.findall(r"\[\[([^\]|#]+)", txt)
+                        for target in links[:20]:
+                            wikilink_edges.append({"from": p.stem, "to": target.strip()})
+                        notes.append({
+                            "name": p.stem,
+                            "path": rel,
+                            "size": p.stat().st_size,
+                            "wikilinks": list(dict.fromkeys(l.strip() for l in links))[:15],
+                            "isMoc": p.stem.startswith("MOC") or p.stem == "00 Home",
+                        })
+                    elif p.suffix.lower() == ".canvas":
+                        canvases.append({"name": p.name, "path": rel, "size": p.stat().st_size})
+                    elif p.suffix.lower() == ".base":
+                        bases.append({"name": p.name, "path": rel, "size": p.stat().st_size})
+
+            skills_list = [
+                {"id": "obsidian-markdown", "name": "Obsidian Flavored Markdown", "author": "@kepano", "desc": "Wikilinks [[Note]], embeds ![[file]], callouts > [!tip], YAML properties & block IDs."},
+                {"id": "json-canvas", "name": "JSON Canvas 1.0 (.canvas)", "author": "@kepano", "desc": "Spatial node & edge architecture boards, mind maps, and group containers."},
+                {"id": "obsidian-bases", "name": "Obsidian Bases (.base)", "author": "@kepano", "desc": "Declarative YAML database tables, card galleries, filters & computed formulas."},
+                {"id": "obsidian-cli", "name": "Obsidian CLI & URI Control", "author": "@kepano", "desc": "Live vault search, backlinks, daily notes, property mutation & plugin reload."},
+                {"id": "knap", "name": "Knap Template Renderer", "author": "@kepano", "desc": "Turn structured JSON/CSV & STDP memory snapshots into formatted Markdown notes."},
+                {"id": "defuddle", "name": "Defuddle Web Clipper", "author": "@kepano", "desc": "Zero-clutter web page to clean Obsidian Markdown extractor."},
+                {"id": "obsidian-second-brain", "name": "Karpathy Second-Brain & STDP Bridge", "author": "NullAI", "desc": "Two-way sync between Obsidian Vault MOCs/Canvases and Neuro-Memory 3D STDP cortex."},
+            ]
+            self._send_json({
+                "ok": True,
+                "vaultPath": str(vault_dir),
+                "noteCount": len(notes),
+                "mocCount": sum(1 for n in notes if n["isMoc"]),
+                "canvasCount": len(canvases),
+                "baseCount": len(bases),
+                "wikilinkEdgeCount": len(wikilink_edges),
+                "skills": skills_list,
+                "notes": notes[:60],
+                "canvases": canvases,
+                "bases": bases,
+                "wikilinkEdges": wikilink_edges[:120],
+            })
+            return
+
         # Serve Static UI Files
         self._serve_static(path)
 
@@ -548,6 +603,35 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
             res = daemon.tag_flashbulb(memory_id=mem_id, salience=salience, reason=reason)
             status_code = 200 if res.get("success") else 404
             self._send_json(res, status=status_code)
+            return
+
+        # Two-Way Obsidian Second Brain <-> Neuro-Memory STDP Synchronization
+        if path in ("/api/obsidian/sync", "/v1/obsidian/sync"):
+            vault_dir = Path.home() / "Documents" / "Obsidian Vault"
+            vault_dir.mkdir(parents=True, exist_ok=True)
+            ingested = 0
+            for moc_name in ("00 Home.md", "Zoth Memory.md", "Zoth Studio.md", "Zoth OS.md", "Vaelor Network.md", "MOC Skills.md"):
+                moc_file = vault_dir / moc_name
+                if moc_file.exists():
+                    snippet = safe_read_text(moc_file)[:280].replace("\n", " ").strip()
+                    daemon.store(
+                        text=f"[Obsidian Second Brain · [[{moc_file.stem}]]] {snippet}",
+                        tags=["obsidian", "second-brain", "moc", moc_file.stem.lower().replace(" ", "-")],
+                        importance=0.92,
+                        category="semantic",
+                        agent_id="obsidian-bridge",
+                    )
+                    ingested += 1
+            EVENT_BROADCASTER.broadcast("obsidian_synced", {"ingested": ingested, "vault": str(vault_dir)})
+            self._send_json({
+                "ok": True,
+                "status": "synced",
+                "ingestedFromVault": ingested,
+                "totalMemories": len(daemon.nodes),
+                "vaultPath": str(vault_dir),
+                "canvasFile": "Zoth Second Brain.canvas",
+                "baseFile": "Zoth Memory Stratum.base",
+            })
             return
 
         self.send_error(404, f"API route not found: {path}")

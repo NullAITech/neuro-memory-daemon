@@ -58,16 +58,25 @@
       auraColor: 0xD8B4FE,
       description: 'ZothOS Kernel, SQLite WAL, Process Tree, Hardware Telemetry',
     },
-    living_minds: {
-      name: 'Living Minds Galaxy',
-      id: 'living_minds',
-      center: new THREE.Vector3(0, 160, 80),
-      color: 0x10B981, // Emerald Biome
-      hex: '#10B981',
-      auraColor: 0x6EE7B7,
-      description: 'Civilization Colonies, Epistemic Reflections, Autonomous Mind',
-    },
-  };
+      living_minds: {
+        name: 'Living Minds Galaxy',
+        id: 'living_minds',
+        center: new THREE.Vector3(0, 160, 80),
+        color: 0x10B981, // Emerald Biome
+        hex: '#10B981',
+        auraColor: 0x6EE7B7,
+        description: 'Civilization Colonies, Epistemic Reflections, Autonomous Mind',
+      },
+      obsidian: {
+        name: 'Obsidian Second Brain',
+        id: 'obsidian',
+        center: new THREE.Vector3(0, -145, 165),
+        color: 0xE879F9, // Radiant Fuchsia-Amethyst
+        hex: '#E879F9',
+        auraColor: 0xF5D0FE,
+        description: 'Obsidian Vault MOCs, JSON Canvas (.canvas), Bases (.base) & 7 Agent Skills',
+      },
+    };
 
   // Helper to generate soft radial glow particle sprite in-memory (no external image assets)
   function createGlowTexture(colorStr, radius = 64) {
@@ -295,9 +304,10 @@
       purpleFillLight.position.set(-200, -100, -200);
       this.scene.add(purpleFillLight);
 
-      // 6. Build Stardust & Galaxy Clusters
+      // 6. Build Stardust, Galaxy Clusters & Interactive 3D Netrunner Core Model
       this.buildStardustField();
       this.buildGalaxyClusters();
+      this.buildNetrunnerCoreModel();
 
       // 7. Event Listeners
       window.addEventListener('resize', () => this.onWindowResize());
@@ -428,12 +438,148 @@
       });
     }
 
+    buildNetrunnerCoreModel() {
+      const coreGroup = new THREE.Group();
+      coreGroup.position.set(0, 0, 0);
+
+      // 1. Cybernetic Icosahedral Brain Cortex (Wireframe + Inner Emissive Core)
+      const brainGeo = new THREE.IcosahedronGeometry(26, 2);
+      const brainWireMat = new THREE.MeshBasicMaterial({
+        color: 0x00E5FF,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.45,
+        blending: THREE.AdditiveBlending,
+      });
+      const brainWireMesh = new THREE.Mesh(brainGeo, brainWireMat);
+      coreGroup.add(brainWireMesh);
+
+      const innerCoreGeo = new THREE.IcosahedronGeometry(14, 1);
+      const innerCoreMat = new THREE.MeshStandardMaterial({
+        color: 0xD4AF37,
+        emissive: 0xD4AF37,
+        emissiveIntensity: 0.85,
+        roughness: 0.2,
+        metalness: 0.9,
+      });
+      const innerCoreMesh = new THREE.Mesh(innerCoreGeo, innerCoreMat);
+      innerCoreMesh.userData = {
+        isNetrunnerCore: true,
+        nodeData: {
+          id: 'netrunner-core-0',
+          label: 'NETRUNNER CYBER-CORTEX CORE',
+          text: 'Sovereign 3-Factor STDP Neural Cortex & Obsidian Second Brain Bridge. Click to fire global Hippocampal Sharp-Wave Ripple (SWR) across all 6 galaxy clusters.',
+          category: 'architecture',
+          agent_id: 'azoth',
+          importance: 2.0,
+          access_count: 99,
+          tags: ['netrunner', 'stdp', 'cortex', 'obsidian', 'hippocampus'],
+        },
+        galaxy: { name: 'Netrunner Cyber-Cortex', hex: '#D4AF37', color: 0xD4AF37 },
+        baseColor: 0xD4AF37,
+        baseRadius: 1.0,
+      };
+      coreGroup.add(innerCoreMesh);
+
+      // 2. Glowing Cybernetic Optic Visor Arc
+      const visorGeo = new THREE.TorusGeometry(28, 1.4, 12, 48, Math.PI * 0.85);
+      const visorMat = new THREE.MeshBasicMaterial({
+        color: 0x00E5FF,
+        transparent: true,
+        opacity: 0.9,
+        blending: THREE.AdditiveBlending,
+      });
+      const visorMesh = new THREE.Mesh(visorGeo, visorMat);
+      visorMesh.rotation.x = Math.PI / 2;
+      visorMesh.rotation.z = -Math.PI * 0.42;
+      visorMesh.position.y = 4;
+      coreGroup.add(visorMesh);
+
+      // 3. Articulated Cybernetic Spinal Column (7 Cervical/Thoracic Neural Vertebrae)
+      const spineGroup = new THREE.Group();
+      for (let i = 0; i < 7; i++) {
+        const radius = 8 - i * 0.7;
+        const discGeo = new THREE.CylinderGeometry(radius, radius * 0.85, 3.2, 16);
+        const discMat = new THREE.MeshStandardMaterial({
+          color: i % 2 === 0 ? 0xD4AF37 : 0x00E5FF,
+          emissive: i % 2 === 0 ? 0xD4AF37 : 0x00E5FF,
+          emissiveIntensity: 0.5,
+          metalness: 0.8,
+          roughness: 0.3,
+        });
+        const disc = new THREE.Mesh(discGeo, discMat);
+        disc.position.y = -32 - i * 7.5;
+        spineGroup.add(disc);
+      }
+      coreGroup.add(spineGroup);
+
+      // 4. Counter-Rotating Gyroscopic STDP Gimbal Rings
+      const gimbal1Geo = new THREE.TorusGeometry(42, 0.65, 16, 96);
+      const gimbal1Mat = new THREE.MeshBasicMaterial({
+        color: 0xD4AF37,
+        transparent: true,
+        opacity: 0.65,
+        blending: THREE.AdditiveBlending,
+      });
+      const gimbal1 = new THREE.Mesh(gimbal1Geo, gimbal1Mat);
+      coreGroup.add(gimbal1);
+
+      const gimbal2Geo = new THREE.TorusGeometry(52, 0.55, 16, 96);
+      const gimbal2Mat = new THREE.MeshBasicMaterial({
+        color: 0x00E5FF,
+        transparent: true,
+        opacity: 0.45,
+        blending: THREE.AdditiveBlending,
+      });
+      const gimbal2 = new THREE.Mesh(gimbal2Geo, gimbal2Mat);
+      gimbal2.rotation.x = Math.PI / 3;
+      coreGroup.add(gimbal2);
+
+      const gimbal3Geo = new THREE.TorusGeometry(62, 0.5, 16, 96);
+      const gimbal3Mat = new THREE.MeshBasicMaterial({
+        color: 0xE879F9,
+        transparent: true,
+        opacity: 0.35,
+        blending: THREE.AdditiveBlending,
+      });
+      const gimbal3 = new THREE.Mesh(gimbal3Geo, gimbal3Mat);
+      gimbal3.rotation.y = Math.PI / 4;
+      coreGroup.add(gimbal3);
+
+      // 5. Floating Label above the Netrunner Cyber-Cortex
+      const coreLabel = createTextSprite('⚡ NETRUNNER CYBER-CORTEX', '#00E5FF', 28);
+      coreLabel.position.set(0, 56, 0);
+      coreGroup.add(coreLabel);
+
+      this.scene.add(coreGroup);
+      this.netrunnerCore = {
+        group: coreGroup,
+        brainWireMesh,
+        innerCoreMesh,
+        visorMesh,
+        spineGroup,
+        gimbal1,
+        gimbal2,
+        gimbal3,
+      };
+    }
+
     // Determine which 3D galaxy cluster an engram belongs to
     determineGalaxy(node) {
       const text = (node.label || node.text || '').toLowerCase();
       const cat = (node.category || '').toLowerCase();
       const tags = (node.tags || []).map(t => String(t).toLowerCase());
       const agentId = (node.agent_id || '').toLowerCase();
+
+      // 0. Obsidian Second Brain Galaxy
+      if (
+        cat === 'obsidian' || cat === 'vault' || cat === 'second-brain' ||
+        agentId.includes('obsidian') ||
+        tags.some(t => ['obsidian', 'vault', 'moc', 'wikilink', 'canvas', 'json-canvas', 'obsidian-bases', 'second-brain', 'defuddle', 'knap'].includes(t)) ||
+        text.includes('obsidian') || text.includes('[[') || text.includes('.canvas') || text.includes('.base') || text.includes('second brain')
+      ) {
+        return GALAXY_CLUSTERS.obsidian;
+      }
 
       // 1. Agents Galaxy
       if (
@@ -929,6 +1075,14 @@
     }
 
     focusGalaxy(galaxyId) {
+      if (galaxyId === 'core' || galaxyId === 'netrunner') {
+        this.clearHighlights();
+        this.fireShockwave(new THREE.Vector3(0, 0, 0), 0x00E5FF, 2.4);
+        if (this.audio) this.audio.playActionPotential(640);
+        this.glideCameraTo(new THREE.Vector3(0, 35, 145), new THREE.Vector3(0, -10, 0));
+        return;
+      }
+
       const galaxy = GALAXY_CLUSTERS[galaxyId];
       if (!galaxy) {
         // Reset to panoramic cosmic view
@@ -972,6 +1126,9 @@
 
       this.raycaster.setFromCamera(this.mouse, this.camera);
       const meshes = Array.from(this.nodeMeshes.values());
+      if (this.netrunnerCore && this.netrunnerCore.innerCoreMesh) {
+        meshes.push(this.netrunnerCore.innerCoreMesh);
+      }
       const intersects = this.raycaster.intersectObjects(meshes);
 
       const tooltip = document.getElementById('nebula-hover-tooltip');
@@ -1036,6 +1193,14 @@
 
     handleNodeClick(event) {
       if (this.hoveredNode) {
+        if (this.hoveredNode.userData && this.hoveredNode.userData.isNetrunnerCore) {
+          this.focusGalaxy('core');
+          this.triggerSleepReplayCascade({ reinforced_synapses: 12, schemata_synthesized: 3, pruned_count: 0 });
+          if (typeof this.onNodeClickCallback === 'function') {
+            this.onNodeClickCallback(this.hoveredNode.userData.nodeData);
+          }
+          return;
+        }
         const nodeData = this.hoveredNode.userData.nodeData;
         this.focusNode(nodeData.id);
 
@@ -1133,10 +1298,34 @@
         this.stardustPoints.geometry.attributes.position.needsUpdate = true;
       }
 
-      // 4. Galaxy Cores rotation
+      // 4. Galaxy Cores & Netrunner Cyber-Cortex rotation
       this.galaxyCores.forEach((c) => {
         if (c.ring) c.ring.rotation.z += 0.005;
       });
+      if (this.netrunnerCore) {
+        const nc = this.netrunnerCore;
+        if (nc.brainWireMesh) {
+          nc.brainWireMesh.rotation.y += 0.004;
+          nc.brainWireMesh.rotation.x = Math.sin(time * 0.6) * 0.15;
+        }
+        if (nc.innerCoreMesh) {
+          nc.innerCoreMesh.rotation.y -= 0.008;
+          const pulseScale = 1.0 + Math.sin(time * 2.5) * 0.08;
+          nc.innerCoreMesh.scale.set(pulseScale, pulseScale, pulseScale);
+        }
+        if (nc.gimbal1) {
+          nc.gimbal1.rotation.z += 0.012;
+          nc.gimbal1.rotation.x += 0.006;
+        }
+        if (nc.gimbal2) {
+          nc.gimbal2.rotation.y -= 0.014;
+          nc.gimbal2.rotation.z += 0.005;
+        }
+        if (nc.gimbal3) {
+          nc.gimbal3.rotation.x += 0.01;
+          nc.gimbal3.rotation.y += 0.008;
+        }
+      }
 
       // 5. Plasma Action Potential Pulses along Bezier Filaments
       for (let i = 0; i < this.plasmaPulses.length; i++) {
