@@ -492,6 +492,26 @@ class MCPServer:
             handler=self._tool_obsidian_daily_log,
         )
 
+        # 17. obsidian_backlinks_inspect
+        self._register_tool(
+            name="obsidian_backlinks_inspect",
+            description=(
+                "Scans the 1,729+ note Obsidian Vault for incoming backlinks ([[Note]] citations), "
+                "outgoing wikilinks, and latent plaintext unlinked mentions."
+            ),
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "note": {
+                        "type": "string",
+                        "description": "Note title or relative path to inspect (default: '00 Home').",
+                        "default": "00 Home",
+                    },
+                },
+            },
+            handler=self._tool_obsidian_backlinks_inspect,
+        )
+
     # -----------------------------------------------------------------------
     # Tool Handlers
     # -----------------------------------------------------------------------
@@ -1059,6 +1079,147 @@ health_score: 100
             "relPath": f"07-Daily/{target_date}.md",
             "entriesCount": entries_count,
             "content": content,
+        }, indent=2)
+
+    def _tool_obsidian_backlinks_inspect(self, args: Dict[str, Any]) -> str:
+        note_query = str(args.get("note") or args.get("title") or "00 Home").strip()
+        from pathlib import Path
+        import re
+
+        vault_dir = Path.home() / "Documents" / "Obsidian Vault"
+        if not vault_dir.exists():
+            return json.dumps({
+                "ok": False,
+                "error": "Vault directory not found",
+                "note": None,
+                "outgoingCount": 0,
+                "outgoingLinks": [],
+                "backlinksCount": 0,
+                "incomingBacklinks": [],
+                "unlinkedCount": 0,
+                "unlinkedMentions": []
+            }, indent=2)
+
+        all_md_files = [p for p in vault_dir.rglob("*.md") if not p.name.startswith(".")]
+        target_file = None
+        q_lower = note_query.lower()
+        q_lower_stem = q_lower[:-3] if q_lower.endswith(".md") else q_lower
+
+        for p in all_md_files:
+            rel = str(p.relative_to(vault_dir)).lower()
+            if p.stem.lower() == q_lower_stem or rel in (q_lower, f"{q_lower_stem}.md"):
+                target_file = p
+                break
+
+        if not target_file:
+            for p in all_md_files:
+                if q_lower_stem in p.stem.lower():
+                    target_file = p
+                    break
+
+        if not target_file:
+            return json.dumps({
+                "ok": False,
+                "error": f"Note '{note_query}' not found in vault",
+                "note": None,
+                "outgoingCount": 0,
+                "outgoingLinks": [],
+                "backlinksCount": 0,
+                "incomingBacklinks": [],
+                "unlinkedCount": 0,
+                "unlinkedMentions": []
+            }, indent=2)
+
+        def _resolve_cluster(p_path: Path) -> str:
+            parts = p_path.relative_to(vault_dir).parts
+            if len(parts) > 1:
+                c = parts[0]
+                if c == "06-Wiki": return "Wiki"
+                if c == "05-Telemetry": return "Telemetry"
+                if c == "04-Ingested": return "Ingested"
+                if c == "07-Daily": return "Daily"
+                return c
+            return "Root"
+
+        note_title = target_file.stem
+        note_rel = str(target_file.relative_to(vault_dir))
+        note_cluster = _resolve_cluster(target_file)
+        note_txt = target_file.read_text(encoding="utf-8", errors="ignore")
+        word_count = len(note_txt.split())
+
+        stem_map = {p.stem.lower(): p for p in all_md_files}
+
+        raw_outgoing = re.findall(r"\[\[([^\]|#]+)", note_txt)
+        dedup_outgoing = list(dict.fromkeys(t.strip() for t in raw_outgoing if t.strip()))
+        outgoing_links = []
+        for t in dedup_outgoing:
+            t_clean = t.strip()
+            target_p = stem_map.get(t_clean.lower())
+            if not target_p and "/" in t_clean:
+                target_p = stem_map.get(Path(t_clean).stem.lower())
+            outgoing_links.append({
+                "target": t_clean,
+                "exists": target_p is not None,
+                "relPath": str(target_p.relative_to(vault_dir)) if target_p else None,
+                "cluster": _resolve_cluster(target_p) if target_p else "Unresolved"
+            })
+
+        esc_stem = re.escape(note_title)
+        esc_rel = re.escape(note_rel[:-3] if note_rel.endswith(".md") else note_rel)
+        link_pat = re.compile(r'\[\[(?:' + esc_stem + r'|' + esc_rel + r')(?:#[^\]|]+)?(?:\|[^\]]+)?\]\]', re.IGNORECASE)
+
+        incoming_backlinks = []
+        unlinked_mentions = []
+
+        for p in all_md_files:
+            if p == target_file:
+                continue
+            try:
+                content = p.read_text(encoding="utf-8", errors="ignore")
+            except Exception:
+                continue
+
+            src_title = p.stem
+            src_rel = str(p.relative_to(vault_dir))
+            src_cluster = _resolve_cluster(p)
+
+            m = link_pat.search(content)
+            if m:
+                start = max(0, m.start() - 60)
+                end = min(len(content), m.end() + 80)
+                incoming_backlinks.append({
+                    "sourceTitle": src_title,
+                    "sourcePath": src_rel,
+                    "cluster": src_cluster,
+                    "contextSnippet": content[start:end].replace("\n", " ").strip()
+                })
+            else:
+                if len(note_title) >= 4:
+                    no_links = re.sub(r'\[\[.*?\]\]', '', content)
+                    idx = no_links.lower().find(note_title.lower())
+                    if idx != -1:
+                        start = max(0, idx - 50)
+                        end = min(len(no_links), idx + len(note_title) + 70)
+                        unlinked_mentions.append({
+                            "sourceTitle": src_title,
+                            "sourcePath": src_rel,
+                            "snippet": no_links[start:end].replace("\n", " ").strip()
+                        })
+
+        return json.dumps({
+            "ok": True,
+            "note": {
+                "title": note_title,
+                "relPath": note_rel,
+                "cluster": note_cluster,
+                "wordCount": word_count
+            },
+            "outgoingCount": len(outgoing_links),
+            "outgoingLinks": outgoing_links,
+            "backlinksCount": len(incoming_backlinks),
+            "incomingBacklinks": incoming_backlinks,
+            "unlinkedCount": len(unlinked_mentions),
+            "unlinkedMentions": unlinked_mentions[:60]
         }, indent=2)
 
     # -----------------------------------------------------------------------

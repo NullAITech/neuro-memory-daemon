@@ -777,6 +777,77 @@ health_score: 100
             "unlinkedMentions": unlinked_mentions[:60]
         }
 
+    def _link_unlinked_mention(self, vault_dir: Path, daemon: Any, source_path: str, target_title: str) -> Dict[str, Any]:
+        """Safely convert plaintext occurrences of target_title into [[target_title]] in source_path."""
+        if not vault_dir.exists():
+            return {"ok": False, "error": "Vault directory not found"}
+
+        target_file = vault_dir / source_path
+        if not target_file.exists():
+            clean_sp = source_path.lower()
+            for p in vault_dir.rglob("*.md"):
+                if str(p.relative_to(vault_dir)).lower() == clean_sp or p.name.lower() == clean_sp:
+                    target_file = p
+                    break
+
+        if not target_file or not target_file.exists():
+            return {"ok": False, "error": f"Source file '{source_path}' not found in vault"}
+
+        content = safe_read_text(target_file)
+        fm_text = ""
+        body_text = content
+        if content.startswith("---"):
+            parts = content.split("---", 2)
+            if len(parts) >= 3:
+                fm_text = "---" + parts[1] + "---"
+                body_text = parts[2]
+
+        protected = []
+        def mask(m):
+            idx = len(protected)
+            protected.append(m.group(0))
+            return f"__PROTECTED_{idx}__"
+
+        masked = re.sub(r'(```[\s\S]*?```|~~~[\s\S]*?~~~)', mask, body_text)
+        masked = re.sub(r'(\[\[[\s\S]*?\]\])', mask, masked)
+        masked = re.sub(r'(\[[^\]]*\]\([^\)]*\))', mask, masked)
+        masked = re.sub(r'(`[^`\n]+`)', mask, masked)
+
+        pat = re.compile(r'\b' + re.escape(target_title) + r'\b')
+        new_body, linked_count = pat.subn(f"[[{target_title}]]", masked)
+
+        for i, b in enumerate(protected):
+            new_body = new_body.replace(f"__PROTECTED_{i}__", b)
+
+        new_content = fm_text + new_body
+        target_file.write_text(new_content, encoding="utf-8")
+
+        rel_path = str(target_file.relative_to(vault_dir))
+        if hasattr(daemon, "store"):
+            try:
+                daemon.store(
+                    text=f"[Obsidian Backlinks Auto-Link] Linked [[{target_title}]] ({linked_count} occurrence(s)) inside {rel_path}.",
+                    tags=["backlinks", "stdp-link", "obsidian", "auto-link"],
+                    importance=0.85,
+                    category="semantic",
+                    agent_id="obsidian-backlinks"
+                )
+            except Exception:
+                pass
+
+        EVENT_BROADCASTER.broadcast("obsidian_backlink_linked", {
+            "sourcePath": rel_path,
+            "targetTitle": target_title,
+            "linkedCount": linked_count
+        })
+
+        return {
+            "ok": True,
+            "sourcePath": rel_path,
+            "targetTitle": target_title,
+            "linkedCount": linked_count
+        }
+
     def do_OPTIONS(self) -> None:
         """Handle CORS preflight requests."""
         self.send_response(204)
@@ -1587,7 +1658,7 @@ health_score: 100
             return
 
         # Link two memories
-        if "/link" in path:
+        if "/link" in path and not path.startswith(("/api/obsidian", "/v1/obsidian")):
             parts = path.split("/")
             mem_id = parts[-2] if parts[-1] == "link" else ""
             target_id = body.get("target_id", "")
@@ -1970,6 +2041,21 @@ health_score: 100
             date_str = body.get("date", "")
             result = self._append_obsidian_daily(vault_dir, daemon, str(entry).strip(), date_str=date_str)
             self._send_json(result, status=201 if result.get("ok") else 500)
+            return
+
+        # Obsidian 1-Click Unlinked Mention Auto-Linker (POST)
+        if path in ("/api/obsidian/backlinks/link", "/v1/obsidian/backlinks/link"):
+            vault_dir = Path.home() / "Documents" / "Obsidian Vault"
+            source_path = str(body.get("sourcePath") or body.get("path") or body.get("file") or "").strip()
+            target_title = str(body.get("targetTitle") or body.get("target") or body.get("title") or "").strip()
+
+            if not source_path or not target_title:
+                self._send_json({"error": "Both 'sourcePath' and 'targetTitle' are required in JSON body."}, status=400)
+                return
+
+            result = self._link_unlinked_mention(vault_dir, daemon, source_path, target_title)
+            status_code = 200 if result.get("ok") else (404 if "not found" in result.get("error", "").lower() else 500)
+            self._send_json(result, status=status_code)
             return
 
         # MCP Tool Invocation over HTTP (POST)

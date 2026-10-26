@@ -6041,9 +6041,9 @@ curl -X POST http://127.0.0.1:8788/api/recall \
             } else {
               unListEl.innerHTML = data.unlinkedMentions.map(u => `
                 <div style="background:#13131F; border:1px solid #28283C; border-radius:6px; padding:8px 10px;">
-                  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+                  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; gap:6px;">
                     <a href="javascript:void(0)" onclick="selectBacklinkHub('${escapeHtml(u.sourceTitle)}')" style="font-size:11.5px; font-weight:700; color:#F59E0B; text-decoration:none;">[[${escapeHtml(u.sourceTitle)}]]</a>
-                    <span style="font-size:9.5px; color:#94A3B8; background:rgba(148,163,184,0.1); padding:1px 5px; border-radius:4px;">Mention</span>
+                    <button class="btn btn-outlined" style="padding:2px 7px; font-size:10px; border-color:rgba(245,158,11,0.5); color:#FCD34D; cursor:pointer;" onclick="linkUnlinkedMention('${escapeHtml(u.sourcePath)}', '${escapeHtml(note.title || query)}')">🔗 Link [[${escapeHtml(note.title || query)}]]</button>
                   </div>
                   <div style="font-size:11px; color:#CBD5E1; line-height:1.4; font-family:var(--font-mono); background:#0A0A10; padding:4px 6px; border-radius:4px;">${escapeHtml(u.snippet)}</div>
                 </div>
@@ -6062,6 +6062,28 @@ curl -X POST http://127.0.0.1:8788/api/recall \
           btn.disabled = false;
           btn.innerHTML = '<span>🔗</span> Inspect Links';
         }
+      }
+    }
+
+    async function linkUnlinkedMention(sourcePath, targetTitle) {
+      if (!sourcePath || !targetTitle) return;
+      showToast(`🔗 Auto-linking [[${targetTitle}]] inside ${sourcePath}...`, 'info');
+
+      try {
+        const res = await fetch(`${API_BASE}/api/obsidian/backlinks/link`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sourcePath, targetTitle })
+        });
+        const data = await res.json();
+        if (res.ok && data.ok) {
+          showToast(`✔ Successfully linked ${data.linkedCount || 1} occurrence(s) into [[${targetTitle}]]!`, 'success');
+          await inspectObsidianBacklinks(targetTitle);
+        } else {
+          showToast(`Auto-link failed: ${data.error || 'Unknown error'}`, 'error');
+        }
+      } catch (err) {
+        showToast(`Auto-linker network error: ${err.message}`, 'error');
       }
     }
 

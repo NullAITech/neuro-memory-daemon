@@ -522,20 +522,21 @@ def test_mcp_obsidian_doctor_audit(obsidian_server: tuple[MemoryUIServer, str, M
 
 
 def test_api_mcp_tools_get(obsidian_server: tuple[MemoryUIServer, str, MemoryDaemon]):
-    """Test GET /api/mcp/tools returns list of 16 registered tools."""
+    """Test GET /api/mcp/tools returns list of 17 registered tools."""
     _, base_url, _ = obsidian_server
     status, _, body = _http_get(f"{base_url}/api/mcp/tools")
     assert status == 200
     data = json.loads(body.decode("utf-8"))
     assert data["ok"] is True
-    assert data["count"] == 16
-    assert len(data["tools"]) == 16
+    assert data["count"] == 17
+    assert len(data["tools"]) == 17
     tool_names = [t["name"] for t in data["tools"]]
     assert "obsidian_doctor_audit" in tool_names
     assert "obsidian_vault_search" in tool_names
     assert "obsidian_wiki_synthesize" in tool_names
     assert "obsidian_canvas_generate" in tool_names
     assert "obsidian_daily_log" in tool_names
+    assert "obsidian_backlinks_inspect" in tool_names
     assert "memory_store" in tool_names
     assert "memory_recall" in tool_names
 
@@ -798,6 +799,110 @@ def test_obsidian_backlinks_get(obsidian_server: tuple[MemoryUIServer, str, Memo
     err_data = json.loads(body.decode("utf-8"))
     assert err_data["ok"] is False
     assert "not found" in err_data["error"]
+
+
+def test_obsidian_backlinks_link_post(obsidian_server: tuple[MemoryUIServer, str, MemoryDaemon]):
+    """Test POST /api/obsidian/backlinks/link safely auto-links plaintext mentions."""
+    _, base_url, _ = obsidian_server
+    vault_dir = Path.home() / "Documents" / "Obsidian Vault"
+    test_note = vault_dir / "04-Ingested" / "test-backlink-auto-link.md"
+
+    initial_content = """---
+title: "Test Backlink Auto Link"
+tags: [test, auto-link]
+---
+
+# Test Heading with Zoth OS
+
+Here is a plaintext Zoth OS mention in a paragraph.
+Here is an existing [[Zoth OS]] wikilink.
+```bash
+echo "Zoth OS"
+```
+And another plaintext Zoth OS mention at the end.
+"""
+    try:
+        test_note.parent.mkdir(parents=True, exist_ok=True)
+        test_note.write_text(initial_content, encoding="utf-8")
+
+        # 1. Successful auto-link conversion
+        status, _, body = _http_post(f"{base_url}/api/obsidian/backlinks/link", {
+            "sourcePath": "04-Ingested/test-backlink-auto-link.md",
+            "targetTitle": "Zoth OS"
+        })
+        assert status == 200
+        data = json.loads(body.decode("utf-8"))
+        assert data["ok"] is True
+        assert data["sourcePath"] == "04-Ingested/test-backlink-auto-link.md"
+        assert data["targetTitle"] == "Zoth OS"
+        assert data["linkedCount"] == 3
+
+        # Verify file content
+        updated_txt = test_note.read_text(encoding="utf-8")
+        assert 'echo "Zoth OS"' in updated_txt  # code block preserved
+        assert "title: \"Test Backlink Auto Link\"" in updated_txt  # frontmatter preserved
+        assert "[[Zoth OS]]" in updated_txt
+        assert "[[[[" not in updated_txt
+
+        # 2. Validation error: missing fields
+        with pytest.raises(urllib.error.HTTPError) as exc_info:
+            _http_post(f"{base_url}/api/obsidian/backlinks/link", {
+                "sourcePath": "04-Ingested/test-backlink-auto-link.md"
+            })
+        assert exc_info.value.code == 400
+
+        # 3. Non-existent file error
+        with pytest.raises(urllib.error.HTTPError) as exc_info:
+            _http_post(f"{base_url}/api/obsidian/backlinks/link", {
+                "sourcePath": "04-Ingested/non-existent-note-xyz.md",
+                "targetTitle": "Zoth OS"
+            })
+        assert exc_info.value.code == 404
+    finally:
+        if test_note.exists():
+            test_note.unlink()
+
+
+def test_mcp_obsidian_backlinks_inspect(obsidian_server: tuple[MemoryUIServer, str, MemoryDaemon]):
+    """Test obsidian_backlinks_inspect MCP tool via direct JSON-RPC and HTTP API."""
+    _, base_url, daemon = obsidian_server
+    mcp = MCPServer(daemon=daemon)
+    assert "obsidian_backlinks_inspect" in mcp.tools
+
+    # 1. Direct MCP JSON-RPC call
+    req = {
+        "jsonrpc": "2.0",
+        "id": 401,
+        "method": "tools/call",
+        "params": {
+            "name": "obsidian_backlinks_inspect",
+            "arguments": {
+                "note": "00 Home"
+            }
+        }
+    }
+    resp = mcp.handle_request(req)
+    assert resp is not None
+    assert not resp["result"].get("isError", False)
+    content = json.loads(resp["result"]["content"][0]["text"])
+    assert content["ok"] is True
+    assert content["note"]["title"] == "00 Home"
+    assert content["outgoingCount"] >= 50
+    assert content["backlinksCount"] >= 40
+
+    # 2. HTTP POST /api/mcp/call invocation
+    status, _, body = _http_post(f"{base_url}/api/mcp/call", {
+        "name": "obsidian_backlinks_inspect",
+        "arguments": {
+            "note": "Zoth OS"
+        }
+    })
+    assert status == 200
+    http_data = json.loads(body.decode("utf-8"))
+    assert http_data["ok"] is True
+    assert http_data["tool"] == "obsidian_backlinks_inspect"
+    assert http_data["result"]["note"]["title"] == "Zoth OS"
+    assert http_data["result"]["backlinksCount"] >= 1000
 
 
 
