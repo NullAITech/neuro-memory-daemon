@@ -2965,6 +2965,77 @@ curl -X POST http://127.0.0.1:8788/api/recall \
           </div>
         </div>
 
+        <!-- Interactive Obsidian Flavored Markdown (OFM) Note Reader & Live Editor (#obsidian-ofm-editor) -->
+        <div class="wiki-panel" id="obsidian-ofm-editor" style="margin-top:16px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:20px;">📝</span>
+              <div>
+                <div style="font-size:15px; font-weight:700; color:#FCD34D;">Obsidian Flavored Markdown (OFM) Note Reader &amp; Live Editor</div>
+                <div style="font-size:11.5px; color:var(--md-on-surface-variant);">Direct AST Reader, Property Inspector, Callout Renderer &amp; Biomorphic STDP Vault Synchronizer</div>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <div style="display:flex; align-items:center; gap:4px;">
+                <input type="text" class="input-field" id="ofm-note-path-input" placeholder="Note path or title (e.g. '00 Home', 'Zoth OS')..." value="00 Home.md" onkeydown="if(event.key==='Enter') loadOfmNote(this.value)" style="padding:5px 10px; font-size:11.5px; width:200px; background:#0F0F18; border:1px solid #28283C; border-radius:6px; color:#EDEFF2;">
+                <button class="btn btn-outlined" onclick="loadOfmNote(document.getElementById('ofm-note-path-input').value)" style="padding:4px 10px; font-size:11px; border-color:rgba(0,229,255,0.4); color:#00E5FF; cursor:pointer;">Open Note</button>
+              </div>
+              <button class="btn btn-primary" id="btn-save-ofm-note" onclick="saveActiveOfmNote()" style="padding:5px 14px; font-size:11.5px; background:linear-gradient(135deg,#10B981,#059669); color:#08080B; font-weight:700; border:none; border-radius:6px; cursor:pointer; display:flex; align-items:center; gap:5px;">
+                <span>💾</span> Save to Vault &amp; Sync STDP
+              </button>
+            </div>
+          </div>
+
+          <!-- Active Note Metadata & Controls Bar -->
+          <div style="background:#0F0F18; border:1px solid #222234; border-radius:6px; padding:8px 12px; margin-bottom:12px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <span style="font-size:13px; font-weight:700; color:#FCD34D;" id="ofm-meta-title">00 Home</span>
+              <span style="font-size:11px; font-family:var(--font-mono); color:#94A3B8;" id="ofm-meta-relpath">00 Home.md</span>
+              <span class="chip-accent" id="ofm-meta-cluster" style="background:rgba(56,189,248,0.15); color:#38BDF8; font-size:10px; padding:2px 7px; border-radius:10px;">Cluster: Root</span>
+              <span class="chip-accent" id="ofm-meta-words" style="background:rgba(232,121,249,0.15); color:#F0ABFC; font-size:10px; padding:2px 7px; border-radius:10px;">692 words</span>
+              <span id="ofm-meta-frontmatter" style="display:flex; align-items:center; gap:4px; flex-wrap:wrap;"></span>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <button type="button" class="btn btn-outlined" onclick="setOfmViewMode('preview')" style="padding:2px 8px; font-size:10px; border-radius:6px; border-color:rgba(0,229,255,0.4); color:#00E5FF;">Preview</button>
+              <button type="button" class="btn btn-outlined" onclick="setOfmViewMode('edit')" style="padding:2px 8px; font-size:10px; border-radius:6px; border-color:rgba(245,158,11,0.4); color:#FCD34D;">Editor</button>
+              <button type="button" class="btn btn-outlined" onclick="setOfmViewMode('split')" style="padding:2px 8px; font-size:10px; border-radius:6px; border-color:rgba(168,85,247,0.4); color:#D8B4FE;">Split View</button>
+            </div>
+          </div>
+
+          <!-- Outgoing Wikilinks Quick Bar -->
+          <div style="font-size:11px; color:#94A3B8; margin-bottom:12px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <span style="font-weight:700; color:#A7F3D0; font-size:10.5px; text-transform:uppercase; letter-spacing:0.5px;">🔗 Outgoing Wikilinks:</span>
+            <div id="ofm-wikilinks-bar" style="display:flex; gap:6px; flex-wrap:wrap; max-height:56px; overflow-y:auto;">
+              <span style="color:#64748B; font-style:italic;">Loading wikilinks...</span>
+            </div>
+          </div>
+
+          <!-- Dual Pane: OFM Rich Preview (Left) + Raw OFM Editor (Right) -->
+          <div id="ofm-dual-pane" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap:14px;">
+            <!-- Left Pane: OFM Rich Preview -->
+            <div style="display:flex; flex-direction:column;">
+              <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#38BDF8; margin-bottom:6px; display:flex; align-items:center; justify-content:space-between;">
+                <span>✦ OFM Rich Preview</span>
+                <span style="font-size:9.5px; color:#94A3B8; font-weight:400;">Rendered AST &amp; Callouts</span>
+              </div>
+              <div id="ofm-preview-pane" style="background:#0A0A12; border:1px solid #1E1E2C; border-radius:8px; padding:14px 16px; min-height:380px; max-height:520px; overflow-y:auto; line-height:1.6; color:#EDEFF2; font-size:12.5px;">
+                <div style="color:#64748B; font-style:italic;">Loading OFM preview...</div>
+              </div>
+            </div>
+
+            <!-- Right Pane: Raw OFM Markdown Editor -->
+            <div id="ofm-editor-pane" style="display:flex; flex-direction:column;">
+              <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#FCD34D; margin-bottom:6px; display:flex; align-items:center; justify-content:space-between;">
+                <span>✦ Raw OFM Markdown Editor</span>
+                <span style="font-size:9.5px; color:#94A3B8; font-weight:400;">YAML Frontmatter &amp; Wikilinks</span>
+              </div>
+              <div style="background:#08080E; border:1px solid #1E1E2C; border-radius:8px; padding:10px; min-height:380px; flex:1; display:flex;">
+                <textarea id="ofm-editor-textarea" style="width:100%; height:100%; min-height:360px; background:transparent; border:none; color:#EDEFF2; font-family:var(--font-mono); font-size:12px; line-height:1.55; resize:vertical; outline:none;" placeholder="Write or edit Obsidian Flavored Markdown with [[wikilinks]], YAML frontmatter, and > [!callouts]..." oninput="onOfmEditorInput()"></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- 7 Official Obsidian Agent Skills Grid -->
         <div style="margin-top:16px;">
           <div style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:0.6px; color:#D4AF37; margin-bottom:10px;">
@@ -5021,7 +5092,8 @@ curl -X POST http://127.0.0.1:8788/api/recall \
         fetchObsidianVaultFiles(),
         fetchMcpTools(),
         fetchObsidianDaily(),
-        inspectObsidianBacklinks('00 Home')
+        inspectObsidianBacklinks('00 Home'),
+        loadOfmNote('00 Home.md')
       ]);
     }
 
@@ -6170,7 +6242,8 @@ curl -X POST http://127.0.0.1:8788/api/recall \
     async function selectBacklinkHub(title) {
       const input = document.getElementById('backlinks-note-input');
       if (input) input.value = title;
-      return await inspectObsidianBacklinks(title);
+      await inspectObsidianBacklinks(title);
+      await loadOfmNote(title);
     }
 
     async function inspectObsidianBacklinks(targetQuery) {
@@ -6342,6 +6415,221 @@ curl -X POST http://127.0.0.1:8788/api/recall \
           card.style.display = 'none';
         }
       });
+    }
+
+    // ---------------------------------------------------------
+    // Obsidian Flavored Markdown (OFM) Note Reader & Live Editor
+    // ---------------------------------------------------------
+    window.activeOfmNote = null;
+
+    function renderOfmMarkdown(raw, frontmatter) {
+      if (!raw) return '<div style="color:#64748B; font-style:italic;">Note is empty.</div>';
+
+      let body = raw;
+      let fmHtml = '';
+      const fmMatch = body.match(/^---\s*\n([\s\S]*?)\n---\s*\n/);
+      if (fmMatch) {
+        body = body.slice(fmMatch[0].length);
+      }
+
+      if (frontmatter && typeof frontmatter === 'object' && Object.keys(frontmatter).length > 0) {
+        const props = Object.entries(frontmatter).map(([k, v]) => {
+          let valStr = Array.isArray(v) ? v.join(', ') : (typeof v === 'object' ? JSON.stringify(v) : String(v));
+          return `<div style="display:flex; align-items:center; gap:6px; font-size:11px;">
+            <span style="color:#94A3B8; font-weight:600; text-transform:uppercase; font-size:9.5px; background:rgba(148,163,184,0.1); padding:1px 5px; border-radius:3px;">${escapeHtml(k)}</span>
+            <span style="color:#CBD5E1; font-family:var(--font-mono);">${escapeHtml(valStr)}</span>
+          </div>`;
+        }).join('');
+        fmHtml = `<div style="background:rgba(245,158,11,0.06); border:1px solid rgba(245,158,11,0.25); border-radius:6px; padding:8px 12px; margin-bottom:14px;">
+          <div style="font-size:10px; font-weight:700; color:#FCD34D; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">✦ Obsidian Frontmatter Properties</div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:6px;">${props}</div>
+        </div>`;
+      }
+
+      // Code blocks
+      const codeBlocks = [];
+      body = body.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, (m, lang, code) => {
+        const idx = codeBlocks.length;
+        codeBlocks.push(`<pre style="background:#050508; border:1px solid #1E1E2C; border-radius:6px; padding:10px; overflow-x:auto; font-family:var(--font-mono); font-size:11.5px; color:#A7F3D0; margin:10px 0;"><code>${escapeHtml(code.trim())}</code></pre>`);
+        return `__OFM_CODE_${idx}__`;
+      });
+
+      // Callouts: > [!type] Title \n > Lines
+      const CALLOUT_THEMES = {
+        note: { color: '#38BDF8', bg: 'rgba(56,189,248,0.08)', border: '#0284C7', icon: 'ℹ️', title: 'Note' },
+        info: { color: '#38BDF8', bg: 'rgba(56,189,248,0.08)', border: '#0284C7', icon: 'ℹ️', title: 'Info' },
+        tip: { color: '#10B981', bg: 'rgba(16,185,129,0.08)', border: '#059669', icon: '💡', title: 'Tip' },
+        important: { color: '#A855F7', bg: 'rgba(168,85,247,0.08)', border: '#7C3AED', icon: '✦', title: 'Important' },
+        abstract: { color: '#C084FC', bg: 'rgba(192,132,252,0.08)', border: '#9333EA', icon: '📄', title: 'Abstract' },
+        warning: { color: '#F59E0B', bg: 'rgba(245,158,11,0.08)', border: '#D97706', icon: '⚠️', title: 'Warning' },
+        danger: { color: '#F43F5E', bg: 'rgba(244,63,94,0.08)', border: '#E11D48', icon: '🚨', title: 'Danger' },
+        quote: { color: '#94A3B8', bg: 'rgba(148,163,184,0.08)', border: '#64748B', icon: '💬', title: 'Quote' }
+      };
+
+      body = body.replace(/(?:^|\n)(>[ \t]*\[!([a-zA-Z0-9_-]+)\][ \t]*([^\n]*)(?:\n>[ \t]*[^\n]*)*)/g, (match, fullBlock, type, customTitle) => {
+        const t = type.toLowerCase();
+        const theme = CALLOUT_THEMES[t] || { color: '#E879F9', bg: 'rgba(232,121,249,0.08)', border: '#C026D3', icon: '📌', title: type };
+        const displayTitle = customTitle.trim() || theme.title;
+        const lines = fullBlock.split('\n').map(l => l.replace(/^>[ \t]?/, ''));
+        lines.shift();
+        const calloutBody = lines.join('<br>');
+        return `<div style="background:${theme.bg}; border-left:4px solid ${theme.border}; border-radius:0 6px 6px 0; padding:10px 14px; margin:12px 0;">
+          <div style="display:flex; align-items:center; gap:6px; font-weight:700; font-size:12px; color:${theme.color}; margin-bottom:4px;">
+            <span>${theme.icon}</span> <span>${escapeHtml(displayTitle)}</span>
+          </div>
+          <div style="font-size:11.5px; color:#E2E8F0; line-height:1.5;">${calloutBody}</div>
+        </div>`;
+      });
+
+      // Wikilinks: [[target|alias]] or [[target]]
+      body = body.replace(/\[\[([^\]\|]+)(?:\|([^\]]+))?\]\]/g, (m, target, alias) => {
+        const text = (alias || target).trim();
+        const cleanTarget = target.trim();
+        return `<a href="javascript:void(0)" onclick="loadOfmNote('${escapeHtml(cleanTarget)}')" style="display:inline-flex; align-items:center; gap:2px; font-size:11px; font-weight:600; color:#38BDF8; background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.3); padding:1px 6px; border-radius:4px; text-decoration:none; margin:0 1px;">🔗 [[${escapeHtml(text)}]]</a>`;
+      });
+
+      // Headings
+      body = body.replace(/^#### (.*$)/gim, '<h5 style="color:#A7F3D0; font-size:13px; margin:14px 0 6px 0;">$1</h5>');
+      body = body.replace(/^### (.*$)/gim, '<h4 style="color:#FCD34D; font-size:14px; margin:16px 0 6px 0;">$1</h4>');
+      body = body.replace(/^## (.*$)/gim, '<h3 style="color:#38BDF8; font-size:16px; margin:18px 0 8px 0; border-bottom:1px solid rgba(56,189,248,0.2); padding-bottom:4px;">$1</h3>');
+      body = body.replace(/^# (.*$)/gim, '<h2 style="color:#E879F9; font-size:18px; margin:18px 0 10px 0; font-weight:700;">$1</h2>');
+
+      // Formatting
+      body = body.replace(/\*\*(.*?)\*\*/g, '<strong style="color:#FFFFFF;">$1</strong>');
+      body = body.replace(/\*(.*?)\*/g, '<em style="color:#CBD5E1;">$1</em>');
+      body = body.replace(/`([^`\n]+)`/g, '<code style="background:#0A0A10; border:1px solid #28283C; padding:1px 5px; border-radius:3px; font-family:var(--font-mono); font-size:11px; color:#FCD34D;">$1</code>');
+      body = body.replace(/^\s*-\s+(.*$)/gim, '<li style="margin-left:18px; margin-bottom:4px; color:#CBD5E1; font-size:12px;">$1</li>');
+      body = body.replace(/\n\n/g, '<div style="height:10px;"></div>');
+
+      // Restore code blocks
+      codeBlocks.forEach((codeHtml, idx) => {
+        body = body.replace(`__OFM_CODE_${idx}__`, codeHtml);
+      });
+
+      return fmHtml + body;
+    }
+
+    async function loadOfmNote(notePathOrTitle) {
+      const query = notePathOrTitle || '00 Home.md';
+      const inputEl = document.getElementById('ofm-note-path-input');
+      if (inputEl) inputEl.value = query;
+
+      try {
+        const res = await fetch(`${API_BASE}/api/obsidian/note?path=${encodeURIComponent(query)}`);
+        const data = await res.json();
+        if (res.ok && data.ok) {
+          window.activeOfmNote = data;
+
+          const titleEl = document.getElementById('ofm-meta-title');
+          const relpathEl = document.getElementById('ofm-meta-relpath');
+          const clusterEl = document.getElementById('ofm-meta-cluster');
+          const wordsEl = document.getElementById('ofm-meta-words');
+          const textarea = document.getElementById('ofm-editor-textarea');
+          const previewEl = document.getElementById('ofm-preview-pane');
+
+          if (titleEl) titleEl.innerText = data.title;
+          if (relpathEl) relpathEl.innerText = data.relPath;
+          if (clusterEl) clusterEl.innerText = `Cluster: ${data.cluster || 'Root'}`;
+          if (wordsEl) wordsEl.innerText = `${data.wordCount || 0} words`;
+          if (textarea) textarea.value = data.content || '';
+          if (previewEl) previewEl.innerHTML = renderOfmMarkdown(data.content, data.frontmatter);
+
+          // Render frontmatter tags
+          const fmEl = document.getElementById('ofm-meta-frontmatter');
+          if (fmEl) {
+            if (data.frontmatter && (data.frontmatter.tags || data.frontmatter.status)) {
+              const rawTags = data.frontmatter.tags;
+              const tags = Array.isArray(rawTags) ? rawTags : (rawTags ? [rawTags] : []);
+              let html = tags.map(t => `<span class="chip-accent" style="font-size:9.5px; background:rgba(245,158,11,0.15); color:#FCD34D; padding:1px 6px; border-radius:8px;">#${escapeHtml(t)}</span>`).join('');
+              if (data.frontmatter.status) {
+                html += `<span class="chip-accent" style="font-size:9.5px; background:rgba(16,185,129,0.15); color:#6EE7B7; padding:1px 6px; border-radius:8px;">${escapeHtml(data.frontmatter.status)}</span>`;
+              }
+              fmEl.innerHTML = html;
+            } else {
+              fmEl.innerHTML = '';
+            }
+          }
+
+          // Render wikilinks pills
+          const linksEl = document.getElementById('ofm-wikilinks-bar');
+          if (linksEl && Array.isArray(data.wikilinks)) {
+            if (data.wikilinks.length === 0) {
+              linksEl.innerHTML = '<span style="color:#64748B; font-style:italic;">No outgoing wikilinks.</span>';
+            } else {
+              linksEl.innerHTML = data.wikilinks.slice(0, 30).map(w => `
+                <a href="javascript:void(0)" onclick="loadOfmNote('${escapeHtml(w)}')" style="display:inline-flex; align-items:center; gap:3px; font-size:10.5px; font-weight:600; color:#38BDF8; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25); padding:2px 7px; border-radius:10px; text-decoration:none;">🔗 [[${escapeHtml(w)}]]</a>
+              `).join('');
+            }
+          }
+
+          // Scroll editor into view if loaded interactively from outside
+          const editorPanel = document.getElementById('obsidian-ofm-editor');
+          if (editorPanel && query !== '00 Home.md' && query !== '00 Home') {
+            editorPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        } else {
+          showToast(`Failed to load note: ${data.error || 'Unknown error'}`, 'error');
+        }
+      } catch (err) {
+        showToast(`Note load error: ${err.message}`, 'error');
+      }
+    }
+
+    async function saveActiveOfmNote() {
+      const textarea = document.getElementById('ofm-editor-textarea');
+      if (!textarea) return;
+      const content = textarea.value;
+      const relPath = window.activeOfmNote ? window.activeOfmNote.relPath : (document.getElementById('ofm-note-path-input')?.value || '00 Home.md');
+
+      showToast(`💾 Saving ${relPath} and syncing STDP...`, 'info');
+      try {
+        const res = await fetch(`${API_BASE}/api/obsidian/note`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ relPath, content })
+        });
+        const data = await res.json();
+        if (res.ok && data.ok) {
+          showToast(`✔ Saved ${data.relPath} (${data.wordCount} words) to Vault & synced STDP engram!`, 'success');
+          await loadOfmNote(data.relPath);
+        } else {
+          showToast(`Save failed: ${data.error || 'Unknown error'}`, 'error');
+        }
+      } catch (err) {
+        showToast(`Network error saving note: ${err.message}`, 'error');
+      }
+    }
+
+    function onOfmEditorInput() {
+      const textarea = document.getElementById('ofm-editor-textarea');
+      const previewEl = document.getElementById('ofm-preview-pane');
+      const wordsEl = document.getElementById('ofm-meta-words');
+      if (!textarea || !previewEl) return;
+      const content = textarea.value;
+      const wordCount = (content.match(/\b\w+\b/g) || []).length;
+      if (wordsEl) wordsEl.innerText = `${wordCount} words`;
+      previewEl.innerHTML = renderOfmMarkdown(content, window.activeOfmNote ? window.activeOfmNote.frontmatter : null);
+    }
+
+    function setOfmViewMode(mode) {
+      const dualPane = document.getElementById('ofm-dual-pane');
+      const previewPane = document.getElementById('ofm-preview-pane');
+      const editorPane = document.getElementById('ofm-editor-pane');
+      if (!dualPane || !previewPane || !editorPane) return;
+
+      if (mode === 'preview') {
+        dualPane.style.gridTemplateColumns = '1fr';
+        previewPane.parentElement.style.display = 'flex';
+        editorPane.style.display = 'none';
+      } else if (mode === 'edit') {
+        dualPane.style.gridTemplateColumns = '1fr';
+        previewPane.parentElement.style.display = 'none';
+        editorPane.style.display = 'flex';
+      } else {
+        dualPane.style.gridTemplateColumns = 'repeat(auto-fit, minmax(340px, 1fr))';
+        previewPane.parentElement.style.display = 'flex';
+        editorPane.style.display = 'flex';
+      }
     }
 
     async function fetchObsidianBases() {

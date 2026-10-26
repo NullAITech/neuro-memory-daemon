@@ -952,6 +952,99 @@ def test_mcp_obsidian_bundle_export(obsidian_server: tuple[MemoryUIServer, str, 
     assert "auditMetrics" in http_data["result"]
 
 
+def test_obsidian_note_get_and_post(obsidian_server: tuple[MemoryUIServer, str, MemoryDaemon]):
+    """Test GET /api/obsidian/note and POST /api/obsidian/note endpoints."""
+    _, base_url, _ = obsidian_server
+
+    # 1. GET default 00 Home.md
+    status, _, body = _http_get(f"{base_url}/api/obsidian/note")
+    assert status == 200
+    data = json.loads(body.decode("utf-8"))
+    assert data["ok"] is True
+    assert data["title"] == "00 Home"
+    assert data["relPath"] == "00 Home.md"
+    assert data["wordCount"] > 100
+    assert "content" in data
+    assert isinstance(data["wikilinks"], list)
+    assert len(data["wikilinks"]) >= 50
+
+    # 2. GET note by title
+    status, _, body = _http_get(f"{base_url}/api/obsidian/note?path=Zoth%20OS")
+    assert status == 200
+    zdata = json.loads(body.decode("utf-8"))
+    assert zdata["ok"] is True
+    assert zdata["title"] == "Zoth OS"
+    assert "frontmatter" in zdata
+
+    # 3. POST new temporary note
+    test_rel = "04-Ingested/test-wave25-note.md"
+    note_content = """---
+title: "Wave 25 Test Note"
+tags: [ofm, wave25, test]
+---
+
+# Wave 25 Test Note
+
+> [!important] Architecture Callout
+> This note tests live OFM reading and saving.
+
+Here is a link to [[00 Home]] and [[Zoth OS]].
+"""
+    vault_dir = Path.home() / "Documents" / "Obsidian Vault"
+    test_file = vault_dir / test_rel
+    try:
+        status, _, body = _http_post(f"{base_url}/api/obsidian/note", {
+            "relPath": test_rel,
+            "content": note_content
+        })
+        assert status == 200
+        post_data = json.loads(body.decode("utf-8"))
+        assert post_data["ok"] is True
+        assert post_data["relPath"] == test_rel
+        assert post_data["wordCount"] > 10
+        assert "updatedAt" in post_data
+
+        # 4. GET the saved note
+        status, _, body = _http_get(f"{base_url}/api/obsidian/note?path={urllib.parse.quote(test_rel)}")
+        assert status == 200
+        read_back = json.loads(body.decode("utf-8"))
+        assert read_back["ok"] is True
+        assert read_back["title"] == "test-wave25-note"
+        assert "00 Home" in read_back["wikilinks"]
+        assert "important" in read_back["callouts"]
+        assert read_back["frontmatter"].get("title") == "Wave 25 Test Note"
+    finally:
+        if test_file.exists():
+            test_file.unlink()
+
+
+def test_obsidian_note_path_traversal_rejected(obsidian_server: tuple[MemoryUIServer, str, MemoryDaemon]):
+    """Test that path traversal attempts outside vault root are rejected with HTTP 400."""
+    _, base_url, _ = obsidian_server
+
+    traversal_paths = [
+        "../../etc/passwd",
+        "/etc/passwd",
+        "../shadow",
+        "04-Ingested/../../../../etc/hosts"
+    ]
+
+    for bad_path in traversal_paths:
+        # GET check
+        with pytest.raises(urllib.error.HTTPError) as exc_info:
+            _http_get(f"{base_url}/api/obsidian/note?path={urllib.parse.quote(bad_path)}")
+        assert exc_info.value.code == 400
+
+        # POST check
+        with pytest.raises(urllib.error.HTTPError) as exc_info_post:
+            _http_post(f"{base_url}/api/obsidian/note", {
+                "relPath": bad_path,
+                "content": "Malicious payload attempt"
+            })
+        assert exc_info_post.value.code == 400
+
+
+
 
 
 

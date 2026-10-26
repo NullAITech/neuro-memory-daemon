@@ -848,6 +848,169 @@ health_score: 100
             "linkedCount": linked_count
         }
 
+    def _safe_vault_path(self, vault_dir: Path, requested_path: str, allow_create: bool = False) -> tuple[Optional[Path], Optional[str], int]:
+        """
+        Enforces strict fixed-root confinement inside vault_dir using os.path.realpath.
+        Rejects any '..' traversal attempting to climb outside vault root with HTTP 400.
+        Returns (resolved_path, error_message, status_code).
+        """
+        from urllib.parse import unquote
+        raw = unquote(str(requested_path or "").strip())
+        if not raw:
+            raw = "00 Home.md"
+
+        vault_root = os.path.realpath(str(vault_dir))
+        normalized = raw.replace("\\", "/")
+
+        # If raw is absolute path or climbs out
+        if os.path.isabs(normalized):
+            candidate = os.path.realpath(normalized)
+        else:
+            candidate = os.path.realpath(os.path.abspath(os.path.join(vault_root, normalized)))
+
+        try:
+            common = os.path.commonpath([vault_root, candidate])
+            if common != vault_root:
+                return None, "Path traversal forbidden: requested path is outside vault root", 400
+        except ValueError:
+            return None, "Path traversal forbidden: drive mismatch or invalid path", 400
+
+        cand_path = Path(candidate)
+        if cand_path.exists() and cand_path.is_file():
+            return cand_path, None, 200
+
+        # Try appending .md if not ending with .md
+        if not candidate.endswith(".md"):
+            cand_md = Path(candidate + ".md")
+            if cand_md.exists() and cand_md.is_file():
+                return cand_md, None, 200
+
+        if allow_create:
+            if not candidate.endswith(".md"):
+                cand_path = Path(candidate + ".md")
+            return cand_path, None, 200
+
+        # Note stem search fallback across vault
+        clean_stem = cand_path.stem.lower()
+        if vault_dir.exists():
+            for p in vault_dir.rglob("*.md"):
+                if any(part.startswith(".") for part in p.parts):
+                    continue
+                if p.stem.lower() == clean_stem or p.name.lower() == raw.lower():
+                    p_real = os.path.realpath(str(p))
+                    if os.path.commonpath([vault_root, p_real]) == vault_root:
+                        return Path(p_real), None, 200
+
+        return None, f"Note not found: {raw}", 404
+
+    def _get_obsidian_note(self, vault_dir: Path, note_param: str) -> tuple[Dict[str, Any], int]:
+        """Retrieve and parse a safe vault note by relative path or title."""
+        target_path, err_msg, status_code = self._safe_vault_path(vault_dir, note_param, allow_create=False)
+        if err_msg or not target_path:
+            return {"ok": False, "error": err_msg}, status_code
+
+        content = safe_read_text(target_path)
+        title = target_path.stem
+        rel_path = str(target_path.relative_to(vault_dir))
+        parts = target_path.relative_to(vault_dir).parts
+        cluster = parts[0] if len(parts) > 1 else "Root"
+        word_count = len(re.findall(r'\b\w+\b', content))
+
+        # Parse YAML frontmatter
+        fm = {}
+        fm_match = re.match(r"^---\s*\n(.*?)\n---\s*\n", content, re.DOTALL)
+        if fm_match:
+            try:
+                import yaml
+                parsed_fm = yaml.safe_load(fm_match.group(1))
+                if isinstance(parsed_fm, dict):
+                    fm = parsed_fm
+            except Exception:
+                pass
+
+        # Extract wikilinks
+        raw_links = re.findall(r'\[\[([^\]\|]+)(?:\|[^\]]+)?\]\]', content)
+        seen_links = set()
+        wikilinks = [w.strip() for w in raw_links if w.strip() and not (w.strip() in seen_links or seen_links.add(w.strip()))]
+
+        # Extract callouts
+        callouts = list(dict.fromkeys(re.findall(r'>\s*\[!([a-zA-Z0-9_-]+)\]', content)))
+
+        return {
+            "ok": True,
+            "title": title,
+            "relPath": rel_path,
+            "cluster": cluster,
+            "wordCount": word_count,
+            "frontmatter": fm,
+            "wikilinks": wikilinks,
+            "callouts": callouts,
+            "content": content,
+        }, 200
+
+    def _save_obsidian_note(self, vault_dir: Path, daemon: Any, rel_path: str, content: str) -> tuple[Dict[str, Any], int]:
+        """Safely write updated Obsidian Flavored Markdown to vault note and sync STDP engram."""
+        target_path, err_msg, status_code = self._safe_vault_path(vault_dir, rel_path, allow_create=True)
+        if err_msg or not target_path:
+            return {"ok": False, "error": err_msg}, status_code
+
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        target_path.write_text(content, encoding="utf-8")
+
+        title = target_path.stem
+        norm_rel = str(target_path.relative_to(vault_dir))
+        word_count = len(re.findall(r'\b\w+\b', content))
+
+        # Extract frontmatter tags if any
+        fm_tags = []
+        fm_match = re.match(r"^---\s*\n(.*?)\n---\s*\n", content, re.DOTALL)
+        if fm_match:
+            try:
+                import yaml
+                parsed = yaml.safe_load(fm_match.group(1))
+                if isinstance(parsed, dict) and "tags" in parsed:
+                    if isinstance(parsed["tags"], list):
+                        fm_tags = [str(t).lower().replace(" ", "-") for t in parsed["tags"] if t]
+                    elif isinstance(parsed["tags"], str):
+                        fm_tags = [t.strip().lower().replace(" ", "-") for t in parsed["tags"].split(",") if t.strip()]
+            except Exception:
+                pass
+
+        tags = ["obsidian", "note"]
+        if len(target_path.relative_to(vault_dir).parts) > 1:
+            tags.append(target_path.relative_to(vault_dir).parts[0].lower().replace(" ", "-"))
+        tags.extend(fm_tags)
+        tags = list(dict.fromkeys(tags))
+
+        clean_body = re.sub(r"^---\s*\n.*?\n---\s*\n", "", content, flags=re.DOTALL).strip()
+        snippet = clean_body[:280].replace("\n", " ").strip()
+        if hasattr(daemon, "store"):
+            try:
+                daemon.store(
+                    text=f"[Obsidian Note · [[{title}]]] {snippet}",
+                    tags=tags,
+                    importance=0.95,
+                    category="semantic",
+                    agent_id="obsidian-editor",
+                )
+            except Exception:
+                pass
+
+        EVENT_BROADCASTER.broadcast("obsidian_note_updated", {
+            "title": title,
+            "relPath": norm_rel,
+            "wordCount": word_count,
+        })
+
+        from datetime import datetime, timezone
+        return {
+            "ok": True,
+            "title": title,
+            "relPath": norm_rel,
+            "wordCount": word_count,
+            "updatedAt": datetime.now(timezone.utc).isoformat(),
+        }, 200
+
     def do_OPTIONS(self) -> None:
         """Handle CORS preflight requests."""
         self.send_response(204)
@@ -1367,6 +1530,14 @@ health_score: 100
             note_param = params.get("note", params.get("title", params.get("q", [""])))[0]
             result = self._query_obsidian_backlinks(vault_dir, note_param)
             self._send_json(result)
+            return
+
+        # Obsidian Safe Note Reader Endpoint (GET)
+        elif path in ("/api/obsidian/note", "/v1/obsidian/note"):
+            vault_dir = Path.home() / "Documents" / "Obsidian Vault"
+            note_param = params.get("path", params.get("note", params.get("title", ["00 Home.md"])))[0]
+            result, status_code = self._get_obsidian_note(vault_dir, note_param)
+            self._send_json(result, status=status_code)
             return
 
         # Obsidian Unified Second Brain Search Endpoint (GET)
@@ -2055,6 +2226,21 @@ health_score: 100
 
             result = self._link_unlinked_mention(vault_dir, daemon, source_path, target_title)
             status_code = 200 if result.get("ok") else (404 if "not found" in result.get("error", "").lower() else 500)
+            self._send_json(result, status=status_code)
+            return
+
+        # Obsidian Safe Note Editor Endpoint (POST)
+        if path in ("/api/obsidian/note", "/v1/obsidian/note"):
+            vault_dir = Path.home() / "Documents" / "Obsidian Vault"
+            rel_path = str(body.get("relPath") or body.get("path") or body.get("file") or "").strip()
+            content = body.get("content")
+            if not rel_path:
+                self._send_json({"ok": False, "error": "Parameter 'relPath' is required in JSON body."}, status=400)
+                return
+            if content is None:
+                self._send_json({"ok": False, "error": "Parameter 'content' is required in JSON body."}, status=400)
+                return
+            result, status_code = self._save_obsidian_note(vault_dir, daemon, rel_path, str(content))
             self._send_json(result, status=status_code)
             return
 
