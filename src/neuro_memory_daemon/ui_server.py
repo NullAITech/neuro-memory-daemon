@@ -1424,6 +1424,42 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
             })
             return
 
+        # MCP Tool Invocation over HTTP (POST)
+        if path in ("/api/mcp/call", "/v1/mcp/call"):
+            tool_name = body.get("name") or body.get("tool")
+            tool_args = body.get("arguments") or body.get("args") or {}
+            if not tool_name:
+                self._send_json({"error": "Parameter 'name' is required in JSON body."}, status=400)
+                return
+
+            try:
+                from .mcp_server import MCPServer
+            except ImportError:
+                from neuro_memory_daemon.mcp_server import MCPServer
+
+            mcp = MCPServer(daemon=daemon)
+            if tool_name not in mcp.handlers:
+                self._send_json({"error": f"Tool '{tool_name}' not found.", "tools": list(mcp.tools.keys())}, status=404)
+                return
+
+            try:
+                handler = mcp.handlers[tool_name]
+                raw_result = handler(tool_args)
+                try:
+                    parsed_result = json.loads(raw_result)
+                except Exception:
+                    parsed_result = raw_result
+
+                self._send_json({
+                    "ok": True,
+                    "tool": tool_name,
+                    "result": parsed_result,
+                })
+                return
+            except Exception as ex:
+                self._send_json({"error": str(ex), "tool": tool_name}, status=500)
+                return
+
         self.send_error(404, f"API route not found: {path}")
 
     def do_DELETE(self) -> None:

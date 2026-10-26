@@ -2786,6 +2786,72 @@ curl -X POST http://127.0.0.1:8788/api/recall \
           </div>
         </div>
 
+        <!-- 15-Tool MCP JSON-RPC Playground & Client Configuration (#obsidian-mcp-playground) -->
+        <div class="wiki-panel" id="obsidian-mcp-playground" style="margin-top:16px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:20px;">🔌</span>
+              <div>
+                <div style="font-size:15px; font-weight:700; color:#F59E0B;">15-Tool MCP JSON-RPC Playground &amp; Client Configuration</div>
+                <div style="font-size:11.5px; color:var(--md-on-surface-variant);">Interactive Model Context Protocol testing sandbox &amp; live runner for Claude, Cursor, Grok, and Antigravity agents.</div>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <span class="wiki-tag-pill" style="color:#F59E0B; border-color:rgba(245,158,11,0.3); font-size:11px;" id="mcp-tools-badge">15 MCP Tools Registered</span>
+              <button class="btn btn-outlined" id="btn-copy-mcp-config" onclick="copyMcpClientConfig()" style="border-color:rgba(245,158,11,0.4); color:#FCD34D; font-size:11.5px; padding:6px 12px; border-radius:6px; display:inline-flex; align-items:center; gap:6px;">
+                <span>📋</span> Copy Claude / Cursor / Grok MCP Config
+              </button>
+            </div>
+          </div>
+
+          <!-- Tool Selector & Quick Action Bar -->
+          <div style="display:flex; flex-direction:column; gap:10px; background:#0B0B12; border:1px solid #1E1E2C; border-radius:8px; padding:12px; margin-bottom:12px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+              <label for="mcp-tool-select" style="font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#9AA0A6;">
+                Select MCP Tool to Execute:
+              </label>
+              <select id="mcp-tool-select" class="select-field" style="max-width:380px; width:100%; padding:6px 10px; font-size:12px; font-family:var(--font-mono); background:#13131F; color:#FCD34D; border:1px solid rgba(245,158,11,0.4); border-radius:6px;" onchange="onSelectMcpTool(this.value)">
+                <!-- Populated dynamically via fetchMcpTools() -->
+              </select>
+            </div>
+
+            <!-- Dynamic Tool Description & Input Schema -->
+            <div id="mcp-tool-schema-view" style="background:#13131F; border:1px solid #232332; border-radius:6px; padding:8px 12px; min-height:36px; display:flex; align-items:center;">
+              <div style="font-size:11.5px; color:#9AA0A6; font-style:italic;">Loading tool schema...</div>
+            </div>
+
+            <!-- Tool JSON Arguments Input Area -->
+            <div>
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+                <label for="mcp-tool-args-input" style="font-size:11px; font-weight:700; text-transform:uppercase; color:#9AA0A6; letter-spacing:0.4px;">
+                  JSON Arguments (Payload):
+                </label>
+                <span style="font-size:10.5px; font-family:var(--font-mono); color:#9AA0A6;">Auto-filled with validated schema sample</span>
+              </div>
+              <textarea id="mcp-tool-args-input" style="width:100%; min-height:85px; max-height:160px; background:#13131F; border:1px solid #232332; border-radius:6px; padding:8px 10px; font-family:var(--font-mono); font-size:11.5px; color:#E0E0E0; resize:vertical; outline:none;" placeholder='{"topic": "STDP Memory Cortex"}'></textarea>
+            </div>
+
+            <!-- Execution Action Bar -->
+            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+              <button class="btn btn-primary" id="btn-execute-mcp-tool" onclick="executeMcpToolCall()" style="background:linear-gradient(135deg, #F59E0B, #D97706); color:#08080B; font-weight:700; border:none; padding:7px 18px; font-size:12px; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                <span>⚡</span> Execute MCP Tool
+              </button>
+              <div style="font-size:10.5px; color:#9AA0A6; font-family:var(--font-mono);">
+                Target Endpoint: <code style="color:#FCD34D;">POST /api/mcp/call</code>
+              </div>
+            </div>
+          </div>
+
+          <!-- Live Output Result Viewer -->
+          <div>
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+              <span style="font-size:11.5px; font-weight:700; text-transform:uppercase; color:#9AA0A6;">Live JSON-RPC Result Response</span>
+              <button class="btn btn-outlined" style="padding:3px 9px; font-size:11px;" onclick="copyMcpResultJson()">📋 Copy JSON</button>
+            </div>
+            <pre id="mcp-tool-result" style="background:#0D0D14; border:1px solid #232332; border-radius:8px; padding:12px; font-family:var(--font-mono); font-size:11px; color:#F3F4F6; min-height:100px; max-height:300px; overflow-y:auto; white-space:pre-wrap; word-break:break-all;">Select a tool above and click "⚡ Execute MCP Tool" to view live JSON-RPC execution results.</pre>
+          </div>
+        </div>
+
         <!-- 7 Official Obsidian Agent Skills Grid -->
         <div style="margin-top:16px;">
           <div style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:0.6px; color:#D4AF37; margin-bottom:10px;">
@@ -4618,7 +4684,8 @@ curl -X POST http://127.0.0.1:8788/api/recall \
         fetchObsidianBases(),
         fetchKnapTelemetry(),
         fetchObsidianGraph(),
-        fetchObsidianVaultFiles()
+        fetchObsidianVaultFiles(),
+        fetchMcpTools()
       ]);
     }
 
@@ -5440,6 +5507,206 @@ curl -X POST http://127.0.0.1:8788/api/recall \
             </div>
           `;
         }).join('');
+      }
+    }
+
+    // ---------------------------------------------------------
+    // 15-Tool MCP JSON-RPC Playground & Client Configuration
+    // ---------------------------------------------------------
+    const MCP_TOOL_SAMPLES = {
+      obsidian_doctor_audit: '{}',
+      obsidian_vault_search: '{\n  "query": "Zoth OS",\n  "limit": 5\n}',
+      obsidian_wiki_synthesize: '{\n  "topic": "Vaelor Account-Lattice & PoUW Protocol"\n}',
+      obsidian_canvas_generate: '{\n  "topic": "STDP Memory Cortex & Neural Plasticity"\n}',
+      memory_recall: '{\n  "query": "Obsidian Second Brain",\n  "top_k": 5\n}',
+      memory_store: '{\n  "text": "Synchronized Obsidian Second Brain with STDP memory cortex.",\n  "category": "semantic",\n  "importance": 0.8\n}',
+      memory_search: '{\n  "query": "Zoth",\n  "limit": 5\n}',
+      memory_graph: '{\n  "format": "json"\n}',
+      memory_consolidate: '{}',
+      memory_stats: '{}',
+      memory_diagnostics: '{}',
+      memory_metacognition: '{}',
+      neuro_neuromodulator_status: '{\n  "task_complexity": 0.5\n}',
+      neuro_neuromodulate_pulse: '{\n  "ne_delta": 0.1,\n  "da_delta": 0.2\n}',
+      neuro_flashbulb_tag: '{\n  "memory_id": "mem_sample",\n  "reason": "Critical architectural decision"\n}'
+    };
+
+    window.mcpToolsList = [];
+
+    async function fetchMcpTools() {
+      try {
+        const res = await fetch(`${API_BASE}/api/mcp/tools`);
+        if (res.ok) {
+          const data = await res.json();
+          window.mcpToolsList = data.tools || [];
+          const badge = document.getElementById('mcp-tools-badge');
+          if (badge) {
+            badge.textContent = `${window.mcpToolsList.length} MCP Tools Registered`;
+          }
+          renderMcpToolsDropdown(window.mcpToolsList);
+        }
+      } catch (err) {
+        console.error('Failed to fetch MCP tools:', err);
+      }
+    }
+
+    function renderMcpToolsDropdown(tools) {
+      const select = document.getElementById('mcp-tool-select');
+      if (!select) return;
+
+      const obsidianTools = tools.filter(t => t.name.startsWith('obsidian_'));
+      const cognitiveTools = tools.filter(t => !t.name.startsWith('obsidian_'));
+
+      let html = '';
+      if (obsidianTools.length > 0) {
+        html += '<optgroup label="💎 Obsidian Second Brain Tools (4 Tools)">';
+        obsidianTools.forEach(t => {
+          html += `<option value="${escapeHtml(t.name)}">${escapeHtml(t.name)}</option>`;
+        });
+        html += '</optgroup>';
+      }
+      if (cognitiveTools.length > 0) {
+        html += '<optgroup label="🧠 Cognitive & STDP Memory Cortex Tools (11 Tools)">';
+        cognitiveTools.forEach(t => {
+          html += `<option value="${escapeHtml(t.name)}">${escapeHtml(t.name)}</option>`;
+        });
+        html += '</optgroup>';
+      }
+
+      select.innerHTML = html;
+      const defaultTool = obsidianTools.find(t => t.name === 'obsidian_doctor_audit') || tools[0];
+      if (defaultTool) {
+        select.value = defaultTool.name;
+        onSelectMcpTool(defaultTool.name);
+      }
+    }
+
+    function onSelectMcpTool(toolName) {
+      const tool = (window.mcpToolsList || []).find(t => t.name === toolName);
+      const schemaView = document.getElementById('mcp-tool-schema-view');
+      const argsInput = document.getElementById('mcp-tool-args-input');
+
+      if (schemaView) {
+        if (tool) {
+          const requiredProps = (tool.inputSchema && tool.inputSchema.required && tool.inputSchema.required.length > 0)
+            ? tool.inputSchema.required.join(', ')
+            : 'none';
+          const propsCount = (tool.inputSchema && tool.inputSchema.properties)
+            ? Object.keys(tool.inputSchema.properties).length
+            : 0;
+          schemaView.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:6px; width:100%;">
+              <div style="font-size:12px; color:#F3F4F6; line-height:1.4;">${escapeHtml(tool.description)}</div>
+              <div style="font-size:10.5px; font-family:var(--font-mono); color:#9AA0A6; white-space:nowrap;">
+                Required: <span style="color:${requiredProps === 'none' ? '#10B981' : '#F59E0B'};">${escapeHtml(requiredProps)}</span> | Params: <span style="color:#38BDF8;">${propsCount}</span>
+              </div>
+            </div>
+          `;
+        } else {
+          schemaView.innerHTML = '<div style="font-size:12px; color:#9AA0A6;">Tool description unavailable</div>';
+        }
+      }
+
+      if (argsInput) {
+        const sample = MCP_TOOL_SAMPLES[toolName] || '{}';
+        argsInput.value = sample;
+      }
+    }
+
+    async function executeMcpToolCall() {
+      const select = document.getElementById('mcp-tool-select');
+      const toolName = select ? select.value : '';
+      if (!toolName) {
+        showToast('Please select an MCP tool first', 'warning');
+        return;
+      }
+      const argsInput = document.getElementById('mcp-tool-args-input');
+      let parsedArgs = {};
+      if (argsInput && argsInput.value.trim()) {
+        try {
+          parsedArgs = JSON.parse(argsInput.value.trim());
+        } catch (e) {
+          showToast('Invalid JSON in arguments: ' + e.message, 'error');
+          return;
+        }
+      }
+
+      const btn = document.getElementById('btn-execute-mcp-tool');
+      const resultEl = document.getElementById('mcp-tool-result');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span>⏳</span> Executing MCP Tool...';
+      }
+      if (resultEl) {
+        resultEl.textContent = 'Calling MCP tool via POST /api/mcp/call...';
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/api/mcp/call`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: toolName, arguments: parsedArgs })
+        });
+        const data = await res.json();
+        if (resultEl) {
+          resultEl.textContent = JSON.stringify(data, null, 2);
+        }
+        if (res.ok && data.ok) {
+          showToast(`⚡ MCP Tool ${toolName} executed successfully!`, 'success');
+        } else {
+          showToast(`MCP Tool error: ${data.error || 'Execution failed'}`, 'error');
+        }
+      } catch (err) {
+        if (resultEl) {
+          resultEl.textContent = 'Network or execution error: ' + err.message;
+        }
+        showToast('MCP Tool execution failed: ' + err.message, 'error');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<span>⚡</span> Execute MCP Tool';
+        }
+      }
+    }
+
+    function copyMcpClientConfig() {
+      const config = {
+        "mcpServers": {
+          "neuro-memory": {
+            "command": "/opt/zothos-ai-env/bin/python",
+            "args": [
+              "-m",
+              "neuro_memory_daemon.mcp_server"
+            ],
+            "env": {
+              "PYTHONPATH": "/home/zoth/NullAITech/neuro-memory-daemon/src"
+            }
+          }
+        }
+      };
+      const jsonStr = JSON.stringify(config, null, 2);
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(jsonStr).then(() => {
+          showToast('📋 Copied Claude / Cursor / Grok MCP Server configuration snippet to clipboard!', 'success');
+        }).catch(() => {
+          prompt('Copy MCP Server configuration:', jsonStr);
+        });
+      } else {
+        prompt('Copy MCP Server configuration:', jsonStr);
+      }
+    }
+
+    function copyMcpResultJson() {
+      const resultEl = document.getElementById('mcp-tool-result');
+      if (!resultEl || !resultEl.textContent) return;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(resultEl.textContent).then(() => {
+          showToast('📋 Copied MCP result JSON to clipboard!', 'success');
+        }).catch(() => {
+          prompt('Copy MCP result:', resultEl.textContent);
+        });
+      } else {
+        prompt('Copy MCP result:', resultEl.textContent);
       }
     }
 

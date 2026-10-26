@@ -521,6 +521,64 @@ def test_mcp_obsidian_doctor_audit(obsidian_server: tuple[MemoryUIServer, str, M
     assert "topHubs" in content
 
 
+def test_api_mcp_tools_get(obsidian_server: tuple[MemoryUIServer, str, MemoryDaemon]):
+    """Test GET /api/mcp/tools returns list of 15 registered tools."""
+    _, base_url, _ = obsidian_server
+    status, _, body = _http_get(f"{base_url}/api/mcp/tools")
+    assert status == 200
+    data = json.loads(body.decode("utf-8"))
+    assert data["ok"] is True
+    assert data["count"] == 15
+    assert len(data["tools"]) == 15
+    tool_names = [t["name"] for t in data["tools"]]
+    assert "obsidian_doctor_audit" in tool_names
+    assert "obsidian_vault_search" in tool_names
+    assert "obsidian_wiki_synthesize" in tool_names
+    assert "obsidian_canvas_generate" in tool_names
+    assert "memory_store" in tool_names
+    assert "memory_recall" in tool_names
+
+
+def test_api_mcp_call_post(obsidian_server: tuple[MemoryUIServer, str, MemoryDaemon]):
+    """Test POST /api/mcp/call invokes registered MCP tools and handles errors."""
+    _, base_url, _ = obsidian_server
+
+    # 1. Successful execution of obsidian_doctor_audit
+    status, _, body = _http_post(f"{base_url}/api/mcp/call", {
+        "name": "obsidian_doctor_audit",
+        "arguments": {}
+    })
+    assert status == 200
+    data = json.loads(body.decode("utf-8"))
+    assert data["ok"] is True
+    assert data["tool"] == "obsidian_doctor_audit"
+    assert "result" in data
+    assert data["result"]["ok"] is True
+    assert data["result"]["score"] == 100
+    assert data["result"]["healthGrade"] == "✦ PERFECT"
+
+    # 2. Execution of memory_stats
+    status, _, body = _http_post(f"{base_url}/api/mcp/call", {
+        "name": "memory_stats",
+        "arguments": {}
+    })
+    assert status == 200
+    stats_data = json.loads(body.decode("utf-8"))
+    assert stats_data["ok"] is True
+    assert stats_data["tool"] == "memory_stats"
+
+    # 3. Validation error: missing 'name' returns 400
+    with pytest.raises(urllib.error.HTTPError) as exc_info:
+        _http_post(f"{base_url}/api/mcp/call", {"arguments": {}})
+    assert exc_info.value.code == 400
+
+    # 4. Unknown tool returns 404
+    with pytest.raises(urllib.error.HTTPError) as exc_info:
+        _http_post(f"{base_url}/api/mcp/call", {"name": "nonexistent_mcp_tool"})
+    assert exc_info.value.code == 404
+
+
+
 
 
 
