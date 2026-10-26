@@ -214,10 +214,9 @@ def _cosine_similarity(vec1: Dict[str, float], vec2: Dict[str, float]) -> float:
     """Calculate cosine similarity between two sparse term vectors."""
     if not vec1 or not vec2:
         return 0.0
-    common_keys = set(vec1.keys()) & set(vec2.keys())
-    if not common_keys:
-        return 0.0
-    dot_product = sum(vec1[k] * vec2[k] for k in common_keys)
+    if len(vec1) > len(vec2):
+        vec1, vec2 = vec2, vec1
+    dot_product = sum(v * vec2[k] for k, v in vec1.items() if k in vec2)
     return max(0.0, min(1.0, dot_product))
 
 

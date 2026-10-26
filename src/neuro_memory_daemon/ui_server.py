@@ -2203,19 +2203,24 @@ health_score: 100
             vault_dir = Path.home() / "Documents" / "Obsidian Vault"
             vault_dir.mkdir(parents=True, exist_ok=True)
             ingested = 0
+            existing_texts = {node.text for node in daemon.nodes.values() if "[Obsidian Second Brain" in node.text}
             for moc_name in ("00 Home.md", "Zoth Memory.md", "Zoth Studio.md", "Zoth OS.md", "Vaelor Network.md", "MOC Skills.md", "MOC Daemons.md", "Zoth Trust & Supply Chain.md"):
                 moc_file = vault_dir / moc_name
                 if moc_file.exists():
                     snippet = safe_read_text(moc_file)[:280].replace("\n", " ").strip()
-                    daemon.store(
-                        text=f"[Obsidian Second Brain · [[{moc_file.stem}]]] {snippet}",
-                        tags=["obsidian", "second-brain", "moc", moc_file.stem.lower().replace(" ", "-")],
-                        importance=0.92,
-                        category="semantic",
-                        agent_id="obsidian-bridge",
-                    )
+                    mem_text = f"[Obsidian Second Brain · [[{moc_file.stem}]]] {snippet}"
+                    if mem_text not in existing_texts:
+                        daemon.store(
+                            text=mem_text,
+                            tags=["obsidian", "second-brain", "moc", moc_file.stem.lower().replace(" ", "-")],
+                            importance=0.92,
+                            category="semantic",
+                            agent_id="obsidian-bridge",
+                        )
+                        existing_texts.add(mem_text)
                     ingested += 1
             for artifact_name in (
+                "Vaelor Layer-1 Complete Architecture.canvas",
                 "Zoth Second Brain.canvas",
                 "Vaelor & Sovereign Economy.canvas",
                 "Zoth Plugin & Connector Marketplace.canvas",
@@ -2231,13 +2236,16 @@ health_score: 100
                 art_file = vault_dir / artifact_name
                 if art_file.exists():
                     snippet = safe_read_text(art_file)[:280].replace("\n", " ").strip()
-                    daemon.store(
-                        text=f"[Obsidian Second Brain · Spec Artifact {art_file.name}] {snippet}",
-                        tags=["obsidian", "second-brain", "canvas" if art_file.suffix == ".canvas" else "base", art_file.stem.lower().replace(" ", "-")],
-                        importance=0.90,
-                        category="procedural",
-                        agent_id="obsidian-bridge",
-                    )
+                    mem_text = f"[Obsidian Second Brain · Spec Artifact {art_file.name}] {snippet}"
+                    if mem_text not in existing_texts:
+                        daemon.store(
+                            text=mem_text,
+                            tags=["obsidian", "second-brain", "canvas" if art_file.suffix == ".canvas" else "base", art_file.stem.lower().replace(" ", "-")],
+                            importance=0.90,
+                            category="procedural",
+                            agent_id="obsidian-bridge",
+                        )
+                        existing_texts.add(mem_text)
                     ingested += 1
             EVENT_BROADCASTER.broadcast("obsidian_synced", {"ingested": ingested, "vault": str(vault_dir)})
             all_canvases = sorted(p.name for p in vault_dir.glob("*.canvas"))
