@@ -1,3 +1,9 @@
+<div align="center">
+  <img src="assets/hero-banner.svg" alt="Neuro Memory Daemon — Sovereign Architecture Banner" width="100%" />
+</div>
+
+<br />
+
 # 🧠 Neuro-Memory Daemon (`neuro-memory-daemon`)
 
 [![CI](https://github.com/NullAITech/neuro-memory-daemon/actions/workflows/ci.yml/badge.svg)](https://github.com/NullAITech/neuro-memory-daemon/actions/workflows/ci.yml)
