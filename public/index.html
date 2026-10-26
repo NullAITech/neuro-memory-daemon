@@ -2721,6 +2721,37 @@ curl -X POST http://127.0.0.1:8788/api/recall \
           </div>
         </div>
 
+        <!-- Interactive Knap Live Telemetry Compiler & Viewer (#obsidian-knap-telemetry) -->
+        <div class="wiki-panel" id="obsidian-knap-telemetry" style="margin-top:16px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:20px;">📊</span>
+              <div>
+                <div style="font-size:15px; font-weight:700; color:#34D399;">Knap Live Telemetry Compiler &amp; Markdown Reports</div>
+                <div style="font-size:11.5px; color:var(--md-on-surface-variant);">Compiled live from :8140 Vaelor Ledger and :8094 Neuro-Memory STDP substrate via @kepano/knap structured templating.</div>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <div style="font-size:11px; font-family:var(--font-mono); color:#9AA0A6;">
+                Vault Path: <span style="color:#34D399;">05-Telemetry/*.md</span>
+              </div>
+              <button class="btn btn-primary" id="btn-obsidian-knap-render" onclick="recompileKnapTelemetry('all')" style="background:linear-gradient(135deg,#10B981,#059669); color:#08080B; font-weight:700; border:none; padding:7px 15px; font-size:12px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:6px;">
+                <span>⚡</span> Re-Compile Live Telemetry (Knap)
+              </button>
+            </div>
+          </div>
+
+          <!-- Telemetry Report Selector Buttons -->
+          <div id="knap-telemetry-tabs" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+            <!-- Rendered dynamically -->
+          </div>
+
+          <!-- Selected Telemetry Report Viewer -->
+          <div id="knap-telemetry-viewer" style="background:#0D0D14; border:1px solid #232332; border-radius:8px; padding:14px; min-height:200px; max-height:440px; overflow-y:auto;">
+            <div style="font-size:12px; color:#9AA0A6; font-style:italic; text-align:center; padding:20px;">Loading Knap telemetry reports...</div>
+          </div>
+        </div>
+
         <!-- 7 Official Obsidian Agent Skills Grid -->
         <div style="margin-top:16px;">
           <div style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:0.6px; color:#D4AF37; margin-bottom:10px;">
@@ -4551,6 +4582,7 @@ curl -X POST http://127.0.0.1:8788/api/recall \
         fetchObsidianWiki(),
         fetchObsidianCanvases(),
         fetchObsidianBases(),
+        fetchKnapTelemetry(),
         fetchObsidianVaultFiles()
       ]);
     }
@@ -5194,6 +5226,97 @@ curl -X POST http://127.0.0.1:8788/api/recall \
         }
         showToast(`✦ Locating engram ${memoryId.substring(0, 8)}... in 3D Cosmic Nebula`, 'info');
       }, 150);
+    }
+
+    let knapTelemetryNotes = [];
+    let activeKnapTelemetryIndex = 0;
+
+    async function fetchKnapTelemetry() {
+      try {
+        const res = await fetch(`${API_BASE}/api/obsidian/telemetry`);
+        if (res.ok) {
+          const data = await res.json();
+          knapTelemetryNotes = data.notes || [];
+          renderKnapTelemetryUI();
+        }
+      } catch (err) {
+        console.error('Failed to fetch Knap telemetry:', err);
+      }
+    }
+
+    function renderKnapTelemetryUI() {
+      const tabsContainer = document.getElementById('knap-telemetry-tabs');
+      const viewerContainer = document.getElementById('knap-telemetry-viewer');
+      if (!tabsContainer || !viewerContainer) return;
+
+      if (!knapTelemetryNotes || knapTelemetryNotes.length === 0) {
+        tabsContainer.innerHTML = '';
+        viewerContainer.innerHTML = '<div style="font-size:12px; color:#9AA0A6; text-align:center; padding:20px;">No telemetry reports found in 05-Telemetry/. Click "Re-Compile Live Telemetry (Knap)" above to generate them.</div>';
+        return;
+      }
+
+      tabsContainer.innerHTML = knapTelemetryNotes.map((note, idx) => {
+        const isActive = idx === activeKnapTelemetryIndex;
+        const borderStyle = isActive ? 'border-color:#34D399; color:#34D399; background:rgba(52,211,153,0.12);' : 'border-color:rgba(52,211,153,0.3); color:#9AA0A6; background:#12121A;';
+        return `
+          <button type="button" class="btn btn-outlined knap-tab-btn" onclick="selectKnapTelemetryReport(${idx})" style="padding:5px 12px; font-size:11.5px; border-radius:6px; cursor:pointer; ${borderStyle}">
+            <span>📑</span> ${escapeHtml(note.title)}
+          </button>
+        `;
+      }).join('');
+
+      const current = knapTelemetryNotes[activeKnapTelemetryIndex] || knapTelemetryNotes[0];
+      if (current) {
+        viewerContainer.innerHTML = `
+          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid #1C1C28;">
+            <div style="font-size:13px; font-weight:700; color:#34D399; display:flex; align-items:center; gap:6px;">
+              <span>📄</span> ${escapeHtml(current.title)}
+            </div>
+            <div style="font-size:11px; font-family:var(--font-mono); color:#9AA0A6;">
+              <span>${escapeHtml(current.relPath)}</span> • Updated: <span style="color:#E2E8F0;">${escapeHtml(current.updated || 'Just now')}</span>
+            </div>
+          </div>
+          <pre style="margin:0; font-family:var(--font-mono); font-size:11.5px; color:#CBD5E1; line-height:1.5; white-space:pre-wrap; word-break:break-word;">${escapeHtml(current.content)}</pre>
+        `;
+      }
+    }
+
+    function selectKnapTelemetryReport(idx) {
+      activeKnapTelemetryIndex = idx;
+      renderKnapTelemetryUI();
+    }
+
+    async function recompileKnapTelemetry(target = 'all') {
+      const btn = document.getElementById('btn-obsidian-knap-render');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span>⏳</span> Compiling Knap Telemetry...';
+      }
+      showToast('⚡ Invoking Knap Structured Telemetry Compiler (05-Telemetry/)...', 'info');
+
+      try {
+        const res = await fetch(`${API_BASE}/api/obsidian/render`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ target })
+        });
+        const data = await res.json();
+        if (res.ok && data.ok) {
+          knapTelemetryNotes = data.notes || [];
+          renderKnapTelemetryUI();
+          showToast(`✔ Knap Telemetry compiled successfully! (${knapTelemetryNotes.length} reports updated)`, 'success');
+          await fetchObsidianAudit();
+        } else {
+          showToast('Knap compilation failed: ' + (data.error || 'Unknown error'), 'error');
+        }
+      } catch (err) {
+        showToast('Knap compilation network error: ' + err.message, 'error');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<span>⚡</span> Re-Compile Live Telemetry (Knap)';
+        }
+      }
     }
 
     async function fetchObsidianBases() {

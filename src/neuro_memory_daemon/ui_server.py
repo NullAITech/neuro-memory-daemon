@@ -774,6 +774,31 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
             self._send_json(result)
             return
 
+        # Obsidian Knap Live Telemetry Endpoint (GET)
+        elif path in ("/api/obsidian/telemetry", "/v1/obsidian/telemetry"):
+            vault_dir = Path.home() / "Documents" / "Obsidian Vault"
+            telemetry_dir = vault_dir / "05-Telemetry"
+            telemetry_notes = []
+            if telemetry_dir.exists():
+                from datetime import datetime, timezone
+                for p in sorted(telemetry_dir.glob("*.md")):
+                    if p.is_file() and not p.name.startswith("."):
+                        mtime = p.stat().st_mtime
+                        mtime_iso = datetime.fromtimestamp(mtime, tz=timezone.utc).isoformat()
+                        content = safe_read_text(p)
+                        telemetry_notes.append({
+                            "title": p.stem,
+                            "relPath": f"05-Telemetry/{p.name}",
+                            "updated": mtime_iso,
+                            "content": content,
+                        })
+            self._send_json({
+                "ok": True,
+                "count": len(telemetry_notes),
+                "notes": telemetry_notes,
+            })
+            return
+
         # Serve Static UI Files
         self._serve_static(path)
 
@@ -1172,6 +1197,56 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
                 limit = 30
             result = self._perform_obsidian_search(vault_dir, daemon, q, limit=limit)
             self._send_json(result)
+            return
+
+        # Obsidian Live Knap Telemetry Compiler Endpoint (POST)
+        if path in ("/api/obsidian/render", "/v1/obsidian/render"):
+            target = str(body.get("target", "all")).lower().strip()
+            if target not in ("all", "vaelor", "memory"):
+                target = "all"
+
+            vault_dir = Path.home() / "Documents" / "Obsidian Vault"
+            telemetry_dir = vault_dir / "05-Telemetry"
+            telemetry_dir.mkdir(parents=True, exist_ok=True)
+
+            cmd_output = ""
+            script_path = Path("/home/zoth/NullAITech/zoth-os/bin/zoth-second-brain")
+            if script_path.exists() and os.access(script_path, os.X_OK):
+                try:
+                    proc = subprocess.run(
+                        [str(script_path), "render", target],
+                        capture_output=True,
+                        text=True,
+                        timeout=20,
+                    )
+                    cmd_output = proc.stdout + (proc.stderr or "")
+                except Exception as ex:
+                    cmd_output = f"Execution notice: {ex}"
+            else:
+                cmd_output = "zoth-second-brain CLI not found at default location; reading existing telemetry."
+
+            from datetime import datetime, timezone
+            notes = []
+            if telemetry_dir.exists():
+                for p in sorted(telemetry_dir.glob("*.md")):
+                    if p.is_file() and not p.name.startswith("."):
+                        mtime = p.stat().st_mtime
+                        mtime_iso = datetime.fromtimestamp(mtime, tz=timezone.utc).isoformat()
+                        content = safe_read_text(p)
+                        notes.append({
+                            "title": p.stem,
+                            "relPath": f"05-Telemetry/{p.name}",
+                            "updated": mtime_iso,
+                            "content": content,
+                        })
+
+            self._send_json({
+                "ok": True,
+                "target": target,
+                "count": len(notes),
+                "notes": notes,
+                "output": cmd_output,
+            })
             return
 
         # Two-Way Obsidian Second Brain <-> Neuro-Memory STDP Synchronization

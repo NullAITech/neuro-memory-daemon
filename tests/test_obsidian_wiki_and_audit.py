@@ -351,4 +351,39 @@ def test_obsidian_search_post(obsidian_server: tuple[MemoryUIServer, str, Memory
     assert any("Hermes" in sm["content"] for sm in data["stdpMatches"])
 
 
+def test_obsidian_telemetry_get(obsidian_server: tuple[MemoryUIServer, str, MemoryDaemon]):
+    """Test GET /api/obsidian/telemetry returns compiled telemetry markdown notes."""
+    _, base_url, _ = obsidian_server
+    status, _, body = _http_get(f"{base_url}/api/obsidian/telemetry")
+    assert status == 200
+    data = json.loads(body.decode("utf-8"))
+    assert data["ok"] is True
+    assert "count" in data
+    assert "notes" in data
+    assert data["count"] >= 3
+    titles = [n["title"] for n in data["notes"]]
+    assert any("Neuro-Memory" in t for t in titles)
+    assert any("Vaelor" in t for t in titles)
+    first_note = data["notes"][0]
+    assert "relPath" in first_note
+    assert "updated" in first_note
+    assert "content" in first_note
+    assert "---" in first_note["content"]
+
+
+def test_obsidian_render_post(obsidian_server: tuple[MemoryUIServer, str, MemoryDaemon]):
+    """Test POST /api/obsidian/render invokes Knap telemetry compilation."""
+    _, base_url, _ = obsidian_server
+    status, _, body = _http_post(f"{base_url}/api/obsidian/render", {"target": "all"})
+    assert status == 200
+    data = json.loads(body.decode("utf-8"))
+    assert data["ok"] is True
+    assert data["target"] == "all"
+    assert "notes" in data
+    assert data["count"] >= 3
+    titles = [n["title"] for n in data["notes"]]
+    assert any("Neuro-Memory" in t for t in titles)
+
+
+
 
