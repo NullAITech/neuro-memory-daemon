@@ -385,5 +385,31 @@ def test_obsidian_render_post(obsidian_server: tuple[MemoryUIServer, str, Memory
     assert any("Neuro-Memory" in t for t in titles)
 
 
+def test_obsidian_graph_get(obsidian_server: tuple[MemoryUIServer, str, MemoryDaemon]):
+    """Test GET /api/obsidian/graph returns vault degree centrality and top hubs."""
+    _, base_url, _ = obsidian_server
+    status, _, body = _http_get(f"{base_url}/api/obsidian/graph")
+    assert status == 200
+    data = json.loads(body.decode("utf-8"))
+    assert data["ok"] is True
+    assert "totalNodes" in data
+    assert "totalEdges" in data
+    assert "clusters" in data
+    assert "topHubs" in data
+    assert data["totalNodes"] >= 1600
+    assert data["totalEdges"] >= 5000
+    assert len(data["topHubs"]) >= 10
+    first_hub = data["topHubs"][0]
+    assert "title" in first_hub
+    assert "relPath" in first_hub
+    assert "inDegree" in first_hub
+    assert "outDegree" in first_hub
+    assert "totalDegree" in first_hub
+    assert "cluster" in first_hub
+    assert first_hub["totalDegree"] >= first_hub["inDegree"]
+
+
+
+
 
 

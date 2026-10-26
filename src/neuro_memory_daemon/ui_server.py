@@ -799,6 +799,114 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
             })
             return
 
+        # Obsidian Knowledge Graph Topology & Degree Centrality Endpoint (GET)
+        elif path in ("/api/obsidian/graph", "/v1/obsidian/graph"):
+            vault_dir = Path.home() / "Documents" / "Obsidian Vault"
+            topology_file = vault_dir / "05-Telemetry" / "obsidian_graph_topology.json"
+
+            if topology_file.exists():
+                try:
+                    data = json.loads(safe_read_text(topology_file))
+                    if isinstance(data, dict) and data.get("ok"):
+                        self._send_json(data)
+                        return
+                except Exception:
+                    pass
+
+            nodes = {}
+            in_degrees = {}
+            out_degrees = {}
+            edges = set()
+            cluster_counts = {}
+
+            if vault_dir.exists():
+                for p in sorted(vault_dir.rglob("*")):
+                    if not p.is_file() or any(part.startswith(".") for part in p.parts):
+                        continue
+                    suf = p.suffix.lower()
+                    if suf not in (".md", ".canvas", ".base"):
+                        continue
+
+                    rel = str(p.relative_to(vault_dir))
+                    stem = p.stem
+                    nodes[stem] = rel
+
+                    parts = p.relative_to(vault_dir).parts
+                    if len(parts) > 1:
+                        cl = parts[0]
+                        if cl == "06-Wiki": cl = "Wiki"
+                        elif cl == "05-Telemetry": cl = "Telemetry"
+                        elif cl == "04-Ingested": cl = "Ingested"
+                    elif suf == ".canvas":
+                        cl = "Canvases"
+                    elif suf == ".base":
+                        cl = "Bases"
+                    else:
+                        cl = "Root"
+
+                    cluster_counts[cl] = cluster_counts.get(cl, 0) + 1
+
+                    try:
+                        content = safe_read_text(p)
+                    except Exception:
+                        content = ""
+
+                    links = re.findall(r"\[\[([^\]|#]+)", content)
+                    unique_links = set(l.strip() for l in links if l.strip())
+                    out_degrees[stem] = len(unique_links)
+                    for target in unique_links:
+                        in_degrees[target] = in_degrees.get(target, 0) + 1
+                        edges.add((stem, target))
+
+            top_hubs = []
+            for title, rel in nodes.items():
+                ind = in_degrees.get(title, 0)
+                outd = out_degrees.get(title, 0)
+                tot = ind + outd
+                parts = Path(rel).parts
+                if len(parts) > 1:
+                    cl = parts[0]
+                    if cl == "06-Wiki": cl = "Wiki"
+                    elif cl == "05-Telemetry": cl = "Telemetry"
+                    elif cl == "04-Ingested": cl = "Ingested"
+                elif rel.endswith(".canvas"):
+                    cl = "Canvases"
+                elif rel.endswith(".base"):
+                    cl = "Bases"
+                else:
+                    cl = "Root"
+
+                top_hubs.append({
+                    "title": title,
+                    "relPath": rel,
+                    "inDegree": ind,
+                    "outDegree": outd,
+                    "totalDegree": tot,
+                    "cluster": cl
+                })
+
+            top_hubs.sort(key=lambda x: (x["totalDegree"], x["inDegree"]), reverse=True)
+
+            from datetime import datetime, timezone
+            result = {
+                "ok": True,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "totalNodes": len(nodes),
+                "totalEdges": len(edges),
+                "clusters": cluster_counts,
+                "clusterDistribution": cluster_counts,
+                "topHubs": top_hubs[:25]
+            }
+
+            try:
+                (vault_dir / "05-Telemetry").mkdir(parents=True, exist_ok=True)
+                topology_file.write_text(json.dumps(result, indent=2, ensure_ascii=False), encoding="utf-8")
+            except Exception:
+                pass
+
+            self._send_json(result)
+            return
+
         # Serve Static UI Files
         self._serve_static(path)
 

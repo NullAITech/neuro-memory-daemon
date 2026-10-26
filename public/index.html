@@ -2752,6 +2752,40 @@ curl -X POST http://127.0.0.1:8788/api/recall \
           </div>
         </div>
 
+        <!-- Knowledge Graph Degree Centrality & Top Hubs (#obsidian-top-hubs) -->
+        <div class="wiki-panel" id="obsidian-top-hubs" style="margin-top:16px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:20px;">🕸️</span>
+              <div>
+                <div style="font-size:15px; font-weight:700; color:#D4AF37;">Knowledge Graph Degree Centrality &amp; Top Hubs</div>
+                <div style="font-size:11.5px; color:var(--md-on-surface-variant);">Graph-theoretic degree centrality analysis across 1,721+ vault notes, canvases, and bases.</div>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <div style="font-size:11px; font-family:var(--font-mono); color:#9AA0A6;" id="obsidian-graph-meta">
+                Topology: <span style="color:#D4AF37;" id="obs-graph-nodes">1,752 Nodes</span> · <span style="color:#38BDF8;" id="obs-graph-edges">7,777 Edges</span>
+              </div>
+              <button class="btn btn-outlined" id="btn-refresh-obsidian-graph" onclick="fetchObsidianGraph(true)" style="padding:5px 12px; font-size:11.5px; border-color:rgba(212,175,55,0.4); color:#FBBF24; cursor:pointer;">
+                🔄 Refresh Graph
+              </button>
+            </div>
+          </div>
+
+          <!-- Cluster Distribution Pills -->
+          <div id="obsidian-cluster-pills" style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px;">
+            <!-- Populated dynamically -->
+          </div>
+
+          <!-- Top 10 Hub Notes Grid -->
+          <div style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#9AA0A6; margin-bottom:8px;">
+            Top 10 High-Centrality Hub Notes:
+          </div>
+          <div id="obsidian-top-hubs-list" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap:10px;">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+
         <!-- 7 Official Obsidian Agent Skills Grid -->
         <div style="margin-top:16px;">
           <div style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:0.6px; color:#D4AF37; margin-bottom:10px;">
@@ -4583,6 +4617,7 @@ curl -X POST http://127.0.0.1:8788/api/recall \
         fetchObsidianCanvases(),
         fetchObsidianBases(),
         fetchKnapTelemetry(),
+        fetchObsidianGraph(),
         fetchObsidianVaultFiles()
       ]);
     }
@@ -5316,6 +5351,95 @@ curl -X POST http://127.0.0.1:8788/api/recall \
           btn.disabled = false;
           btn.innerHTML = '<span>⚡</span> Re-Compile Live Telemetry (Knap)';
         }
+      }
+    }
+
+    let obsidianGraphData = null;
+
+    async function fetchObsidianGraph(interactive = false) {
+      const btn = document.getElementById('btn-refresh-obsidian-graph');
+      if (btn && interactive) {
+        btn.disabled = true;
+        btn.innerHTML = '<span>⏳</span> Refreshing...';
+      }
+      try {
+        const res = await fetch(`${API_BASE}/api/obsidian/graph`);
+        if (res.ok) {
+          obsidianGraphData = await res.json();
+          renderObsidianGraphUI(obsidianGraphData);
+          if (interactive) {
+            showToast(`🕸️ Graph Topology Refreshed: ${obsidianGraphData.totalNodes} Nodes, ${obsidianGraphData.totalEdges} Edges`, 'success');
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch obsidian graph topology:', err);
+      } finally {
+        if (btn && interactive) {
+          btn.disabled = false;
+          btn.innerHTML = '🔄 Refresh Graph';
+        }
+      }
+    }
+
+    function renderObsidianGraphUI(data) {
+      if (!data || !data.ok) return;
+
+      const nodesEl = document.getElementById('obs-graph-nodes');
+      const edgesEl = document.getElementById('obs-graph-edges');
+      if (nodesEl) nodesEl.innerText = `${(data.totalNodes || 0).toLocaleString()} Nodes`;
+      if (edgesEl) edgesEl.innerText = `${(data.totalEdges || 0).toLocaleString()} Edges`;
+
+      // Render cluster pills
+      const clusterContainer = document.getElementById('obsidian-cluster-pills');
+      if (clusterContainer && (data.clusters || data.clusterDistribution)) {
+        const clMap = data.clusters || data.clusterDistribution;
+        const clusters = Object.entries(clMap).sort((a, b) => b[1] - a[1]);
+        clusterContainer.innerHTML = clusters.map(([cl, count]) => {
+          const colors = {
+            'OS': '#38BDF8',
+            'Studio': '#A855F7',
+            'Skills': '#10B981',
+            'MCP': '#F59E0B',
+            'Root': '#D4AF37',
+            'Wiki': '#E879F9',
+            'Canvases': '#00E5FF',
+            'Bases': '#34D399',
+            'Telemetry': '#F43F5E',
+            'Agents': '#818CF8'
+          };
+          const col = colors[cl] || '#94A3B8';
+          return `
+            <span style="font-size:11px; font-family:var(--font-mono); background:${col}18; color:${col}; border:1px solid ${col}33; padding:2px 8px; border-radius:12px; display:inline-flex; align-items:center; gap:4px;">
+              <span style="font-weight:700;">${escapeHtml(cl)}:</span> <span>${count}</span>
+            </span>
+          `;
+        }).join('');
+      }
+
+      // Render Top 10 Hub Notes
+      const hubsContainer = document.getElementById('obsidian-top-hubs-list');
+      if (hubsContainer && data.topHubs) {
+        const hubs = data.topHubs.slice(0, 10);
+        hubsContainer.innerHTML = hubs.map((hub, idx) => {
+          const rankBadge = idx === 0 ? '👑 #1' : `#${idx + 1}`;
+          const clusterBadgeColor = hub.cluster === 'OS' ? '#38BDF8' : (hub.cluster === 'Studio' ? '#A855F7' : (hub.cluster === 'Wiki' ? '#E879F9' : '#D4AF37'));
+          return `
+            <div style="background:#13131F; border:1px solid #232332; border-radius:8px; padding:10px; display:flex; flex-direction:column; gap:6px;">
+              <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <span style="font-size:10.5px; font-weight:700; color:#D4AF37; background:rgba(212,175,55,0.15); padding:1px 6px; border-radius:4px;">${rankBadge}</span>
+                  <span style="font-size:12.5px; font-weight:700; color:#F3F4F6;">${escapeHtml(hub.title)}</span>
+                </div>
+                <span style="font-size:10px; font-family:var(--font-mono); color:${clusterBadgeColor}; background:${clusterBadgeColor}18; padding:1px 6px; border-radius:4px;">${escapeHtml(hub.cluster)}</span>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between; font-size:11px; font-family:var(--font-mono); color:#9AA0A6; background:#0B0B11; padding:4px 8px; border-radius:4px;">
+                <span>In-Degree: <b style="color:#10B981;">${hub.inDegree}</b></span>
+                <span>Out-Degree: <b style="color:#F59E0B;">${hub.outDegree}</b></span>
+                <span>Total Degree: <b style="color:#D4AF37;">${hub.totalDegree}</b></span>
+              </div>
+            </div>
+          `;
+        }).join('');
       }
     }
 
