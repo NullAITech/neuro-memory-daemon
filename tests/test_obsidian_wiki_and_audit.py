@@ -205,3 +205,80 @@ def test_obsidian_bases_get(obsidian_server: tuple[MemoryUIServer, str, MemoryDa
         assert "properties" in b
         assert "rawYaml" in b
 
+
+def test_obsidian_canvas_post(obsidian_server: tuple[MemoryUIServer, str, MemoryDaemon]):
+    """Test POST /api/obsidian/canvas procedural JSON Canvas 1.0 synthesis."""
+    _, base_url, _ = obsidian_server
+
+    # Validation check: empty topic returns 400
+    with pytest.raises(urllib.error.HTTPError) as exc_info:
+        _http_post(f"{base_url}/api/obsidian/canvas", {"topic": ""})
+    assert exc_info.value.code == 400
+
+    # Successful canvas generation
+    test_topic = "Wave11 Pytest Cluster"
+    status, _, body = _http_post(f"{base_url}/api/obsidian/canvas", {"topic": test_topic})
+    assert status == 201
+    data = json.loads(body.decode("utf-8"))
+    assert data["ok"] is True
+    assert "canvas" in data
+    canvas = data["canvas"]
+    assert "name" in canvas
+    assert "relPath" in canvas
+    assert canvas["nodeCount"] >= 1
+    assert "nodes" in canvas
+    assert "edges" in canvas
+
+    # Cleanup generated canvas file
+    vault_dir = Path.home() / "Documents" / "Obsidian Vault"
+    gen_file = vault_dir / canvas["name"]
+    if gen_file.exists():
+        try:
+            gen_file.unlink()
+        except Exception:
+            pass
+
+
+def test_obsidian_ingest_post(obsidian_server: tuple[MemoryUIServer, str, MemoryDaemon]):
+    """Test POST /api/obsidian/ingest creates Markdown note and stores STDP engram."""
+    _, base_url, daemon = obsidian_server
+
+    # Validation check: missing title/content returns 400
+    with pytest.raises(urllib.error.HTTPError) as exc_info:
+        _http_post(f"{base_url}/api/obsidian/ingest", {"title": "", "content": ""})
+    assert exc_info.value.code == 400
+
+    # Successful ingestion
+    test_payload = {
+        "title": "Wave 11 Pytest Ingestion Spec",
+        "content": "Autonomous agents require zero-trust cryptographically verified supply chain boundaries.",
+        "source": "pytest-unit-test",
+        "tags": ["agents", "zero-trust", "pytest"]
+    }
+    status, _, body = _http_post(f"{base_url}/api/obsidian/ingest", test_payload)
+    assert status == 201
+    data = json.loads(body.decode("utf-8"))
+    assert data["ok"] is True
+    assert "note" in data
+    note = data["note"]
+    assert note["title"] == "Wave 11 Pytest Ingestion Spec"
+    assert "slug" in note
+    assert "relPath" in note
+    assert "memoryId" in note
+
+    # Verify physical file was written with YAML frontmatter
+    vault_dir = Path.home() / "Documents" / "Obsidian Vault"
+    ingested_file = vault_dir / note["relPath"]
+    assert ingested_file.exists()
+    content_text = ingested_file.read_text(encoding="utf-8")
+    assert "---" in content_text
+    assert "title: \"Wave 11 Pytest Ingestion Spec\"" in content_text
+    assert "[[00 Home]]" in content_text
+
+    # Cleanup test file
+    try:
+        ingested_file.unlink()
+    except Exception:
+        pass
+
+

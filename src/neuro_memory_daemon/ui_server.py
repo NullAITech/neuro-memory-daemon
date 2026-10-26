@@ -916,6 +916,132 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
                 self._send_json({"error": f"Failed to synthesize article for topic: {topic}"}, status=500)
             return
 
+        # Procedural JSON Canvas 1.0 Synthesis Endpoint
+        if path in ("/api/obsidian/canvas", "/v1/obsidian/canvas"):
+            topic = body.get("topic", "").strip()
+            if not topic:
+                self._send_json({"error": "Topic is required in JSON body: {\"topic\": \"...\"}"}, status=400)
+                return
+
+            cli_path = Path("/home/zoth/NullAITech/zoth-os/bin/zoth-second-brain")
+            vault_dir = Path.home() / "Documents" / "Obsidian Vault"
+            vault_dir.mkdir(parents=True, exist_ok=True)
+
+            if cli_path.exists():
+                try:
+                    subprocess.run([str(cli_path), "canvas", topic], capture_output=True, text=True, timeout=30)
+                except Exception:
+                    pass
+
+            clean_name = re.sub(r'["\']', '', topic).strip()
+            target_file = vault_dir / f"{clean_name} Knowledge Map.canvas"
+            if not target_file.exists():
+                target_file = vault_dir / f"{clean_name}.canvas"
+            if not target_file.exists():
+                for p in vault_dir.rglob("*.canvas"):
+                    if clean_name.lower() in p.stem.lower():
+                        target_file = p
+                        break
+
+            if target_file.exists():
+                try:
+                    cdata = json.loads(safe_read_text(target_file))
+                except Exception:
+                    cdata = {"nodes": [], "edges": []}
+                nodes = cdata.get("nodes", []) if isinstance(cdata, dict) else []
+                edges = cdata.get("edges", []) if isinstance(cdata, dict) else []
+                groups = [n for n in nodes if isinstance(n, dict) and n.get("type") == "group"]
+                rel_path = str(target_file.relative_to(vault_dir))
+
+                daemon.store(
+                    text=f"[Obsidian JSON Canvas · {target_file.name}] Procedurally generated topology with {len(nodes)} nodes, {len(edges)} edges for topic '{topic}'.",
+                    tags=["canvas", "json-canvas", "knowledge-map", topic.lower().replace(" ", "-")],
+                    importance=1.1,
+                    category="architecture",
+                    agent_id="obsidian-bridge"
+                )
+                EVENT_BROADCASTER.broadcast("obsidian_canvas_generated", {"topic": topic, "file": target_file.name})
+                self._send_json({
+                    "ok": True,
+                    "canvas": {
+                        "name": target_file.name,
+                        "relPath": rel_path,
+                        "nodeCount": len(nodes),
+                        "edgeCount": len(edges),
+                        "groupCount": len(groups),
+                        "nodes": nodes,
+                        "edges": edges,
+                    }
+                }, status=201)
+            else:
+                self._send_json({"error": f"Failed to generate canvas for topic: {topic}"}, status=500)
+            return
+
+        # Obsidian Ingest Endpoint
+        if path in ("/api/obsidian/ingest", "/v1/obsidian/ingest"):
+            title = body.get("title", "").strip()
+            content = body.get("content", "").strip()
+            source = body.get("source", "antigravity-studio").strip()
+            raw_tags = body.get("tags", [])
+            tags = raw_tags if isinstance(raw_tags, list) else [str(raw_tags)]
+
+            if not title or not content:
+                self._send_json({"error": "Both 'title' and 'content' are required in JSON body."}, status=400)
+                return
+
+            vault_dir = Path.home() / "Documents" / "Obsidian Vault"
+            ingest_dir = vault_dir / "04-Ingested"
+            ingest_dir.mkdir(parents=True, exist_ok=True)
+
+            slug = re.sub(r'[^a-zA-Z0-9_-]', '-', title.lower()).strip('-')
+            if not slug:
+                slug = "ingested-note"
+            target_file = ingest_dir / f"{slug}.md"
+
+            from datetime import datetime, timezone
+            now_iso = datetime.now(timezone.utc).isoformat()
+            tags_yaml = ", ".join(t.strip() for t in tags if t.strip())
+
+            note_lines = [
+                "---",
+                f'title: "{title}"',
+                f'created: "{now_iso}"',
+                f'source: "{source}"',
+                f'status: "INGESTED"',
+                f'tags: [{tags_yaml}]',
+                "---",
+                "",
+                f"# {title}",
+                "",
+                content,
+                "",
+                "---",
+                "## Provenance & Backlinks",
+                f"- **Source**: {source}",
+                "- **Ingested into**: [[00 Home]] · [[Zoth Memory]]",
+            ]
+            note_text = "\n".join(note_lines)
+            target_file.write_text(note_text, encoding="utf-8")
+
+            rec = daemon.store(
+                text=f"[Obsidian Ingest · [[{title}]]] {content[:280]}",
+                tags=["ingested", "obsidian", *[t.lower().replace(" ", "-") for t in tags if t]],
+                importance=1.1,
+                category="semantic",
+                agent_id="obsidian-bridge"
+            )
+            EVENT_BROADCASTER.broadcast("obsidian_ingested", {"title": title, "file": target_file.name})
+            self._send_json({
+                "ok": True,
+                "note": {
+                    "title": title,
+                    "slug": slug,
+                    "relPath": f"04-Ingested/{target_file.name}",
+                    "memoryId": rec.get("id") if isinstance(rec, dict) else getattr(rec, "id", None),
+                }
+            }, status=201)
+            return
+
         # Two-Way Obsidian Second Brain <-> Neuro-Memory STDP Synchronization
         if path in ("/api/obsidian/sync", "/v1/obsidian/sync"):
             vault_dir = Path.home() / "Documents" / "Obsidian Vault"

@@ -2686,6 +2686,14 @@ curl -X POST http://127.0.0.1:8788/api/recall \
               </div>
             </div>
 
+            <!-- 1-Click Procedural Canvas Generator Bar -->
+            <div style="display:flex; gap:8px; align-items:center; background:rgba(8,8,12,0.85); border:1px solid rgba(0,229,255,0.3); border-radius:8px; padding:6px 10px; margin-bottom:12px;">
+              <input type="text" class="wiki-input" id="canvas-topic-input" placeholder="Topic to map (e.g. 'Byzantine Fault Tolerance', 'STDP Memory Cortex')..." onkeydown="if(event.key==='Enter') generateObsidianCanvas()">
+              <button class="btn btn-primary" id="btn-gen-obsidian-canvas" style="background:linear-gradient(135deg, #00E5FF, #0284C7); color:#08080B; font-weight:700; border:none; padding:6px 14px; font-size:11.5px; border-radius:6px; white-space:nowrap; cursor:pointer;" onclick="generateObsidianCanvas()">
+                <span>✦</span> Generate Canvas
+              </button>
+            </div>
+
             <!-- Canvas Metrics Bar -->
             <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px;" id="canvas-metrics-bar">
               <span class="wiki-tag-pill" style="color:#00E5FF; border-color:rgba(0,229,255,0.3);" id="canvas-stat-nodes">-- Nodes</span>
@@ -4813,6 +4821,51 @@ curl -X POST http://127.0.0.1:8788/api/recall \
       }).catch(() => {
         showToast('Failed to copy JSON', 'error');
       });
+    }
+
+    async function generateObsidianCanvas() {
+      const input = document.getElementById('canvas-topic-input');
+      const btn = document.getElementById('btn-gen-obsidian-canvas');
+      const topic = (input ? input.value : '').trim();
+      if (!topic) {
+        showToast('Please enter a topic to procedurally generate a JSON Canvas (e.g. "Byzantine Fault Tolerance")', 'info');
+        return;
+      }
+
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span>⏳</span> Generating Canvas...';
+      }
+      showToast(`🎨 Generating JSON Canvas 1.0 for topic "${topic}"...`, 'info');
+
+      try {
+        const res = await fetch(`${API_BASE}/api/obsidian/canvas`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ topic })
+        });
+        const data = await res.json();
+        if (res.ok && data.ok) {
+          showToast(`✦ Procedurally generated Canvas: ${data.canvas.name} (${data.canvas.nodeCount} nodes, ${data.canvas.edgeCount} edges)!`, 'success');
+          if (input) input.value = '';
+          await fetchObsidianCanvases();
+          await fetchObsidianAudit();
+          const select = document.getElementById('canvas-select');
+          if (select && data.canvas && data.canvas.name) {
+            select.value = data.canvas.name;
+            renderCanvasView(data.canvas);
+          }
+        } else {
+          showToast('Canvas generation failed: ' + (data.error || 'Unknown error'), 'error');
+        }
+      } catch (err) {
+        showToast('Canvas generation network error: ' + err.message, 'error');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<span>✦</span> Generate Canvas';
+        }
+      }
     }
 
     async function fetchObsidianBases() {
