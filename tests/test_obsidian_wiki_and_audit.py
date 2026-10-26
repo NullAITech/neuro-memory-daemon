@@ -616,6 +616,46 @@ def test_obsidian_bases_records_get(obsidian_server: tuple[MemoryUIServer, str, 
     assert default_data["totalMatched"] == 71
 
 
+def test_obsidian_daily_get(obsidian_server: tuple[MemoryUIServer, str, MemoryDaemon]):
+    """Test GET /api/obsidian/daily returns today's Daily Sovereign Note."""
+    _, base_url, _ = obsidian_server
+    status, _, body = _http_get(f"{base_url}/api/obsidian/daily")
+    assert status == 200
+    data = json.loads(body.decode("utf-8"))
+    assert data["ok"] is True
+    assert "date" in data
+    assert "relPath" in data
+    assert "07-Daily" in data["relPath"]
+    assert "content" in data
+    assert "Daily Sovereign Note" in data["content"]
+    assert "Live Sovereign Snapshot" in data["content"]
+    assert "entriesCount" in data
+    assert data["entriesCount"] >= 1
+
+
+def test_obsidian_daily_post(obsidian_server: tuple[MemoryUIServer, str, MemoryDaemon]):
+    """Test POST /api/obsidian/daily appends an engineering log entry and STDP engram."""
+    _, base_url, daemon = obsidian_server
+
+    # 1. Successful append
+    status, _, body = _http_post(f"{base_url}/api/obsidian/daily", {
+        "entry": "Automated pytest engineering log verification."
+    })
+    assert status == 201
+    data = json.loads(body.decode("utf-8"))
+    assert data["ok"] is True
+    assert "Automated pytest engineering log verification." in data["content"]
+    assert "appended" in data
+    assert "Automated pytest engineering log verification." in data["appended"]
+    assert data["entriesCount"] >= 2
+
+    # 2. Validation error: missing entry returns 400
+    with pytest.raises(urllib.error.HTTPError) as exc_info:
+        _http_post(f"{base_url}/api/obsidian/daily", {"entry": "  "})
+    assert exc_info.value.code == 400
+
+
+
 
 
 

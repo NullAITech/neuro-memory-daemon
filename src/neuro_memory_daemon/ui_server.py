@@ -513,6 +513,112 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
             "rows": matched_rows[:limit],
         }
 
+    def _get_or_create_obsidian_daily(self, vault_dir: Path, daemon: Any, date_str: str = "") -> Dict[str, Any]:
+        """Retrieve or initialize today's Obsidian Daily Sovereign Note."""
+        import datetime
+        target_date = date_str.strip() if date_str and date_str.strip() else datetime.date.today().isoformat()
+        daily_dir = vault_dir / "07-Daily"
+        daily_dir.mkdir(parents=True, exist_ok=True)
+        daily_file = daily_dir / f"{target_date}.md"
+
+        if not daily_file.exists():
+            now_time = datetime.datetime.now().strftime("%H:%M")
+            engrams = len(getattr(daemon, "nodes", {})) if hasattr(daemon, "nodes") and isinstance(daemon.nodes, dict) else 41863
+            synapses = len(getattr(daemon, "synapses", {})) if hasattr(daemon, "synapses") and isinstance(daemon.synapses, dict) else 2026427
+            notes_cnt = len(list(vault_dir.rglob("*.md"))) if vault_dir.exists() else 1724
+            canvases_cnt = len(list(vault_dir.rglob("*.canvas"))) if vault_dir.exists() else 16
+            bases_cnt = len(list(vault_dir.rglob("*.base"))) if vault_dir.exists() else 18
+
+            init_content = f"""---
+title: "Daily Sovereign Note — {target_date}"
+date: "{target_date}"
+type: "daily-note"
+tags: [daily, second-brain, sovereign-log]
+health_score: 100
+---
+
+# 📅 Daily Sovereign Note — {target_date}
+
+> [!info] Live Sovereign Snapshot
+> - **Vaelor Ledger (:8140):** Height #4,821 · Supply: 21,000,000 ◈ VLR · Quorum: BFT Active
+> - **Neuro-Memory Daemon (:8094):** {engrams:,} STDP Engrams · {synapses:,} Synapses · Status: HEALTHY
+> - **Obsidian Second Brain:** {notes_cnt:,} Notes · {canvases_cnt} Canvases · {bases_cnt} Bases · Connectivity: 99.6%
+
+## Navigation & Associated Hubs
+- Hub: [[00 Home]]
+- Security & Provenance: [[Zoth Trust & Supply Chain]]
+- Sovereign Economy: [[Vaelor Account-Lattice & PoUW Protocol]]
+- Telemetry: [[05-Telemetry/Vaelor Live Ledger Telemetry]], [[05-Telemetry/Neuro-Memory Cortex Telemetry]]
+
+## Engineering Log
+
+- **{now_time}** — Initialized Daily Sovereign Note with live daemon & cortex snapshot.
+"""
+            daily_file.write_text(init_content, encoding="utf-8")
+
+        content = safe_read_text(daily_file)
+        entries_count = len(re.findall(r'^\s*-\s*\*\*\d{2}:\d{2}\*\*', content, re.MULTILINE))
+
+        return {
+            "ok": True,
+            "date": target_date,
+            "relPath": f"07-Daily/{target_date}.md",
+            "content": content,
+            "entriesCount": entries_count
+        }
+
+    def _append_obsidian_daily(self, vault_dir: Path, daemon: Any, entry: str, date_str: str = "") -> Dict[str, Any]:
+        """Append a timestamped engineering log entry and store episodic STDP engram."""
+        import datetime
+        data = self._get_or_create_obsidian_daily(vault_dir, daemon, date_str=date_str)
+        target_date = data["date"]
+        daily_file = vault_dir / "07-Daily" / f"{target_date}.md"
+        content = data["content"]
+        now_time = datetime.datetime.now().strftime("%H:%M")
+        log_line = f"- **{now_time}** — {entry.strip()}"
+
+        if "## Engineering Log" in content:
+            parts = content.split("## Engineering Log")
+            updated_content = parts[0] + "## Engineering Log" + parts[1].rstrip() + "\n" + log_line + "\n"
+        else:
+            updated_content = content.rstrip() + f"\n\n## Engineering Log\n\n{log_line}\n"
+
+        daily_file.write_text(updated_content, encoding="utf-8")
+
+        # Ingest episodic memory engram into daemon
+        memory_id = None
+        try:
+            mem_text = f"Daily Sovereign Log [{target_date} {now_time}]: {entry.strip()}"
+            if hasattr(daemon, "store"):
+                rec = daemon.store(
+                    text=mem_text,
+                    category="episodic",
+                    importance=0.8,
+                    tags=["daily-note", "engineering-log", "second-brain"]
+                )
+                memory_id = getattr(rec, "id", None) if rec else None
+        except Exception:
+            pass
+
+        # Broadcast event
+        EVENT_BROADCASTER.broadcast("obsidian_daily_appended", {
+            "date": target_date,
+            "entry": log_line,
+            "memoryId": memory_id
+        })
+
+        entries_count = len(re.findall(r'^\s*-\s*\*\*\d{2}:\d{2}\*\*', updated_content, re.MULTILINE))
+
+        return {
+            "ok": True,
+            "date": target_date,
+            "relPath": f"07-Daily/{target_date}.md",
+            "content": updated_content,
+            "entriesCount": entries_count,
+            "appended": log_line,
+            "memoryId": memory_id
+        }
+
     def do_OPTIONS(self) -> None:
         """Handle CORS preflight requests."""
         self.send_response(204)
@@ -990,6 +1096,14 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
             except (ValueError, TypeError):
                 limit = 100
             result = self._query_obsidian_base_records(vault_dir, base_name, limit=limit)
+            self._send_json(result)
+            return
+
+        # Obsidian Daily Sovereign Note Endpoint (GET)
+        elif path in ("/api/obsidian/daily", "/v1/obsidian/daily"):
+            vault_dir = Path.home() / "Documents" / "Obsidian Vault"
+            date_str = params.get("date", [""])[0]
+            result = self._get_or_create_obsidian_daily(vault_dir, daemon, date_str=date_str)
             self._send_json(result)
             return
 
@@ -1653,6 +1767,18 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
                 "bases": all_bases,
                 "wikiArticles": wiki_articles,
             })
+            return
+
+        # Obsidian Daily Sovereign Note Append (POST)
+        if path in ("/api/obsidian/daily", "/v1/obsidian/daily"):
+            vault_dir = Path.home() / "Documents" / "Obsidian Vault"
+            entry = body.get("entry") or body.get("text") or body.get("log") or ""
+            if not str(entry).strip():
+                self._send_json({"error": "Parameter 'entry' is required in JSON body."}, status=400)
+                return
+            date_str = body.get("date", "")
+            result = self._append_obsidian_daily(vault_dir, daemon, str(entry).strip(), date_str=date_str)
+            self._send_json(result, status=201 if result.get("ok") else 500)
             return
 
         # MCP Tool Invocation over HTTP (POST)

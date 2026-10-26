@@ -2852,6 +2852,37 @@ curl -X POST http://127.0.0.1:8788/api/recall \
           </div>
         </div>
 
+        <!-- Daily Sovereign Journal (#obsidian-daily-note) -->
+        <div class="wiki-panel" id="obsidian-daily-note" style="margin-top:16px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:20px;">📅</span>
+              <div>
+                <div style="font-size:15px; font-weight:700; color:#F59E0B;">Daily Sovereign Journal &amp; Engineering Log</div>
+                <div style="font-size:11.5px; color:var(--md-on-surface-variant);">Automated daily note synthesis at <code>07-Daily/&lt;YYYY-MM-DD&gt;.md</code> with bidirectional STDP episodic engrams.</div>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <span class="wiki-tag-pill" style="color:#F59E0B; border-color:rgba(245,158,11,0.3); font-size:11px;" id="obsidian-daily-date-badge">2026-10-26</span>
+              <span class="wiki-tag-pill" style="color:#10B981; border-color:rgba(16,185,129,0.3); font-size:11px;" id="obsidian-daily-entries-badge">0 Entries</span>
+              <button class="btn btn-outlined" style="padding:4px 9px; font-size:11px;" onclick="copyDailyNoteContent()">📋 Copy Note</button>
+            </div>
+          </div>
+
+          <!-- Quick Append Action Bar -->
+          <div style="display:flex; gap:8px; align-items:center; background:rgba(8,8,12,0.85); border:1px solid rgba(245,158,11,0.3); border-radius:8px; padding:8px 12px; margin-bottom:12px;">
+            <input type="text" class="wiki-input" id="obsidian-daily-input" placeholder="Append engineering log entry to today's Daily Note (e.g. 'Completed Wave 19 daily note architecture')..." onkeydown="if(event.key==='Enter') appendDailyNoteEntry()" style="flex:1;">
+            <button class="btn btn-primary" id="btn-obsidian-daily-append" style="background:linear-gradient(135deg, #F59E0B, #D97706); color:#08080B; font-weight:700; border:none; padding:7px 16px; font-size:11.5px; border-radius:6px; white-space:nowrap; cursor:pointer; display:inline-flex; align-items:center; gap:6px;" onclick="appendDailyNoteEntry()">
+              <span>➕</span> Append Daily Log &amp; STDP Engram
+            </button>
+          </div>
+
+          <!-- Note Content Viewer -->
+          <div style="background:#0D0D14; border:1px solid #232332; border-radius:8px; padding:14px; min-height:160px; max-height:360px; overflow-y:auto;">
+            <pre id="obsidian-daily-viewer" style="font-family:var(--font-mono); font-size:11.5px; color:#E0E0E0; white-space:pre-wrap; margin:0; line-height:1.5;">Loading today's Daily Sovereign Note...</pre>
+          </div>
+        </div>
+
         <!-- 7 Official Obsidian Agent Skills Grid -->
         <div style="margin-top:16px;">
           <div style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:0.6px; color:#D4AF37; margin-bottom:10px;">
@@ -4692,7 +4723,8 @@ curl -X POST http://127.0.0.1:8788/api/recall \
         fetchKnapTelemetry(),
         fetchObsidianGraph(),
         fetchObsidianVaultFiles(),
-        fetchMcpTools()
+        fetchMcpTools(),
+        fetchObsidianDaily()
       ]);
     }
 
@@ -5714,6 +5746,87 @@ curl -X POST http://127.0.0.1:8788/api/recall \
         });
       } else {
         prompt('Copy MCP result:', resultEl.textContent);
+      }
+    }
+
+    // ---------------------------------------------------------
+    // Daily Sovereign Journal (07-Daily/<YYYY-MM-DD>.md)
+    // ---------------------------------------------------------
+    window.activeDailyNote = null;
+
+    async function fetchObsidianDaily() {
+      const viewer = document.getElementById('obsidian-daily-viewer');
+      const dateBadge = document.getElementById('obsidian-daily-date-badge');
+      const entriesBadge = document.getElementById('obsidian-daily-entries-badge');
+
+      try {
+        const res = await fetch(`${API_BASE}/api/obsidian/daily`);
+        if (res.ok) {
+          const data = await res.json();
+          window.activeDailyNote = data;
+          if (dateBadge) dateBadge.textContent = data.date;
+          if (entriesBadge) entriesBadge.textContent = `${data.entriesCount} Entries`;
+          if (viewer) viewer.textContent = data.content || 'Daily note empty.';
+        }
+      } catch (err) {
+        console.error('Failed to fetch obsidian daily note:', err);
+      }
+    }
+
+    async function appendDailyNoteEntry() {
+      const input = document.getElementById('obsidian-daily-input');
+      const entryText = input ? input.value.trim() : '';
+      if (!entryText) {
+        showToast('Please enter a daily log entry', 'warning');
+        return;
+      }
+
+      const btn = document.getElementById('btn-obsidian-daily-append');
+      const viewer = document.getElementById('obsidian-daily-viewer');
+      const entriesBadge = document.getElementById('obsidian-daily-entries-badge');
+
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span>⏳</span> Appending...';
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/api/obsidian/daily`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ entry: entryText })
+        });
+        const data = await res.json();
+        if (res.ok && data.ok) {
+          window.activeDailyNote = data;
+          if (input) input.value = '';
+          if (viewer) viewer.textContent = data.content;
+          if (entriesBadge) entriesBadge.textContent = `${data.entriesCount} Entries`;
+          showToast(`✦ Appended entry to ${data.relPath} & synchronized STDP engram!`, 'success');
+          fetchMemories();
+        } else {
+          showToast(`Failed to append entry: ${data.error || 'Server error'}`, 'error');
+        }
+      } catch (err) {
+        showToast(`Network error appending daily note: ${err.message}`, 'error');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<span>➕</span> Append Daily Log &amp; STDP Engram';
+        }
+      }
+    }
+
+    function copyDailyNoteContent() {
+      if (!window.activeDailyNote || !window.activeDailyNote.content) return;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(window.activeDailyNote.content).then(() => {
+          showToast(`📋 Copied today's Daily Sovereign Note to clipboard!`, 'success');
+        }).catch(() => {
+          prompt('Copy Daily Note:', window.activeDailyNote.content);
+        });
+      } else {
+        prompt('Copy Daily Note:', window.activeDailyNote.content);
       }
     }
 
