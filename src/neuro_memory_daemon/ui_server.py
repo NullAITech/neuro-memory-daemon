@@ -407,7 +407,7 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
         daemon = self._get_daemon()
 
         # Ingest / Store Memory
-        if path in ("/api/memories", "/api/store", "/v1/memories/encode", "/v1/memories"):
+        if path in ("/api/memories", "/api/store", "/api/remember", "/v1/memories/encode", "/v1/memories"):
             text = body.get("text", "") or body.get("human_digest", "") or body.get("summary", "")
             if not text:
                 self._send_json({"error": "Memory text is required"}, status=400)
