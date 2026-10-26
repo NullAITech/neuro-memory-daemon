@@ -2665,31 +2665,100 @@ curl -X POST http://127.0.0.1:8788/api/recall \
           </div>
         </div>
 
-        <!-- Notes & JSON Canvas / Base Inspector -->
-        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:16px; margin-top:16px;">
-          <div>
-            <div style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:0.6px; color:#00E5FF; margin-bottom:10px;">
-              ✦ Maps of Content (MOCs) &amp; Vault Notes
+        <!-- Interactive JSON Canvas 2D Visualizer & Obsidian Bases Inspector -->
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(460px, 1fr)); gap:16px; margin-top:16px;">
+          
+          <!-- Card 1: JSON Canvas 1.0 Spatial 2D Visualizer -->
+          <div class="wiki-panel" style="margin-top:0;">
+            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:20px;">▣</span>
+                <div>
+                  <div style="font-size:15px; font-weight:700; color:#00E5FF;">JSON Canvas 1.0 Spatial 2D Visualizer</div>
+                  <div style="font-size:11.5px; color:var(--md-on-surface-variant);">Live spatial node &amp; edge topology preview for all 14 official Obsidian Canvases.</div>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <select id="canvas-select" class="select-field" style="max-width:240px; padding:5px 8px; font-size:12px; font-family:var(--font-mono); background:#0F0F18; color:#00E5FF; border-color:rgba(0,229,255,0.4);" onchange="onSelectCanvas(this.value)">
+                  <!-- Options populated dynamically from /api/obsidian/canvases -->
+                </select>
+                <button class="btn btn-outlined" style="padding:5px 9px; font-size:11px;" onclick="copyActiveCanvasJson()">📋 Copy JSON</button>
+              </div>
             </div>
-            <div id="obsidian-notes-list" style="display:flex; flex-direction:column; gap:8px; max-height:360px; overflow-y:auto; padding-right:4px;">
-              <!-- Populated dynamically -->
+
+            <!-- Canvas Metrics Bar -->
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px;" id="canvas-metrics-bar">
+              <span class="wiki-tag-pill" style="color:#00E5FF; border-color:rgba(0,229,255,0.3);" id="canvas-stat-nodes">-- Nodes</span>
+              <span class="wiki-tag-pill" style="color:#A855F7; border-color:rgba(168,85,247,0.3);" id="canvas-stat-edges">-- Edges</span>
+              <span class="wiki-tag-pill" style="color:#10B981; border-color:rgba(16,185,129,0.3);" id="canvas-stat-groups">-- Groups</span>
+              <span class="wiki-tag-pill" style="color:#D4AF37; border-color:rgba(212,175,55,0.3);" id="canvas-stat-path">~/Documents/Obsidian Vault</span>
             </div>
+
+            <!-- Tabs: 2D Spatial SVG vs JSON Payload -->
+            <div style="display:flex; gap:8px; margin-bottom:8px;">
+              <button class="btn btn-outlined active" id="btn-canvas-tab-svg" style="padding:4px 10px; font-size:11px;" onclick="switchCanvasSubTab('svg')">✦ Spatial 2D Canvas</button>
+              <button class="btn btn-outlined" id="btn-canvas-tab-json" style="padding:4px 10px; font-size:11px;" onclick="switchCanvasSubTab('json')">{} JSON Payload</button>
+            </div>
+
+            <!-- SVG Container -->
+            <div id="canvas-svg-container" style="min-height:360px; max-height:480px; overflow:hidden; border:1px solid #2A2A38; border-radius:10px; background:radial-gradient(ellipse at center, #0F0F1A 0%, #08080C 100%);">
+              <!-- 2D SVG injected here -->
+            </div>
+
+            <!-- JSON Container -->
+            <pre class="code-preview" id="canvas-json-preview" style="display:none; max-height:480px; overflow-y:auto; font-size:11.5px;"></pre>
           </div>
-          <div>
-            <div style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:0.6px; color:#10B981; margin-bottom:10px;">
-              ▣ Live JSON Canvas (`.canvas`) &amp; Bases (`.base`) Spec Preview
+
+          <!-- Card 2: Obsidian Bases (.base) Dynamic Inspector -->
+          <div class="wiki-panel" style="margin-top:0;">
+            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:20px;">◈</span>
+                <div>
+                  <div style="font-size:15px; font-weight:700; color:#10B981;">Obsidian Bases (.base) Dynamic Inspector</div>
+                  <div style="font-size:11.5px; color:var(--md-on-surface-variant);">Declarative YAML databases with dynamic views, formulas &amp; summaries across 18 bases.</div>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <select id="base-select" class="select-field" style="max-width:240px; padding:5px 8px; font-size:12px; font-family:var(--font-mono); background:#0F0F18; color:#10B981; border-color:rgba(16,185,129,0.4);" onchange="onSelectBase(this.value)">
+                  <!-- Options populated dynamically from /api/obsidian/bases -->
+                </select>
+                <button class="btn btn-outlined" style="padding:5px 9px; font-size:11px;" onclick="copyActiveBaseYaml()">📋 Copy YAML</button>
+              </div>
             </div>
-            <pre class="code-preview" id="obsidian-spec-preview" style="max-height:360px; overflow-y:auto;">{
-  "canvas": "Zoth Second Brain.canvas",
-  "base": "Zoth Memory Stratum.base",
-  "spec": "JSON Canvas 1.0 + Obsidian Bases YAML",
-  "nodes": [
-    { "id": "moc-home", "type": "file", "file": "00 Home.md", "color": "4" },
-    { "id": "moc-memory", "type": "file", "file": "Zoth Memory.md", "color": "6" },
-    { "id": "moc-studio", "type": "file", "file": "Zoth Studio.md", "color": "5" },
-    { "id": "moc-vaelor", "type": "file", "file": "Vaelor Network.md", "color": "2" }
-  ]
-}</pre>
+
+            <!-- Base Metrics Bar -->
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px;" id="base-metrics-bar">
+              <span class="wiki-tag-pill" style="color:#10B981; border-color:rgba(16,185,129,0.3);" id="base-stat-views">-- Views</span>
+              <span class="wiki-tag-pill" style="color:#D4AF37; border-color:rgba(212,175,55,0.3);" id="base-stat-formulas">-- Formulas</span>
+              <span class="wiki-tag-pill" style="color:#00E5FF; border-color:rgba(0,229,255,0.3);" id="base-stat-props">-- Properties</span>
+              <span class="wiki-tag-pill" style="color:#E879F9; border-color:rgba(232,121,249,0.3);" id="base-stat-path">~/Documents/Obsidian Vault</span>
+            </div>
+
+            <!-- Tabs: Views & Formulas vs Raw YAML -->
+            <div style="display:flex; gap:8px; margin-bottom:8px;">
+              <button class="btn btn-outlined active" id="btn-base-tab-parsed" style="padding:4px 10px; font-size:11px;" onclick="switchBaseSubTab('parsed')">✦ Views &amp; Formulas</button>
+              <button class="btn btn-outlined" id="btn-base-tab-yaml" style="padding:4px 10px; font-size:11px;" onclick="switchBaseSubTab('yaml')">≡ Raw YAML</button>
+            </div>
+
+            <!-- Parsed Container -->
+            <div id="base-parsed-container" style="min-height:360px; max-height:480px; overflow-y:auto; border:1px solid #2A2A38; border-radius:10px; padding:14px; background:rgba(10,10,16,0.7); display:flex; flex-direction:column; gap:12px;">
+              <!-- Views, formulas & properties rendered dynamically -->
+            </div>
+
+            <!-- Raw YAML Container -->
+            <pre class="code-preview" id="base-yaml-preview" style="display:none; max-height:480px; overflow-y:auto; font-size:11.5px;"></pre>
+          </div>
+
+        </div>
+
+        <!-- Maps of Content (MOCs) Notes Inspector -->
+        <div style="margin-top:16px;">
+          <div style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:0.6px; color:#00E5FF; margin-bottom:10px;">
+            ✦ Maps of Content (MOCs) &amp; Vault Notes
+          </div>
+          <div id="obsidian-notes-list" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:10px; max-height:320px; overflow-y:auto; padding-right:4px;">
+            <!-- Populated dynamically -->
           </div>
         </div>
       </div>
@@ -4349,10 +4418,17 @@ curl -X POST http://127.0.0.1:8788/api/recall \
     window.wikiArticles = [];
     window.__activeWikiIndex = 0;
 
+    window.vaultCanvases = [];
+    window.vaultBases = [];
+    window.__activeCanvas = null;
+    window.__activeBase = null;
+
     async function fetchObsidianVault() {
       await Promise.allSettled([
         fetchObsidianAudit(),
         fetchObsidianWiki(),
+        fetchObsidianCanvases(),
+        fetchObsidianBases(),
         fetchObsidianVaultFiles()
       ]);
     }
@@ -4544,6 +4620,309 @@ curl -X POST http://127.0.0.1:8788/api/recall \
         showToast(`📋 Copied [[${art.title}]] Markdown to clipboard!`, 'success');
       }).catch(() => {
         showToast('Failed to copy Markdown', 'error');
+      });
+    }
+
+    // ---------------------------------------------------------
+    // Wave 10: JSON Canvas 1.0 Visualizer & Bases Inspector
+    // ---------------------------------------------------------
+    async function fetchObsidianCanvases() {
+      try {
+        const res = await fetch(`${API_BASE}/api/obsidian/canvases`);
+        if (res.ok) {
+          const data = await res.json();
+          window.vaultCanvases = data.canvases || [];
+          const select = document.getElementById('canvas-select');
+          if (select) {
+            select.innerHTML = window.vaultCanvases.map(c => `
+              <option value="${escapeHtml(c.name)}">${escapeHtml(c.name)} (${c.nodeCount}n · ${c.edgeCount}e)</option>
+            `).join('');
+            const defaultCanvas = window.vaultCanvases.find(c => c.name.includes('Pillars')) || window.vaultCanvases[0];
+            if (defaultCanvas) {
+              select.value = defaultCanvas.name;
+              renderCanvasView(defaultCanvas);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch obsidian canvases:', err);
+      }
+    }
+
+    function onSelectCanvas(name) {
+      const c = (window.vaultCanvases || []).find(can => can.name === name);
+      if (c) renderCanvasView(c);
+    }
+
+    function renderCanvasView(c) {
+      if (!c) return;
+      window.__activeCanvas = c;
+
+      const nEl = document.getElementById('canvas-stat-nodes');
+      const eEl = document.getElementById('canvas-stat-edges');
+      const gEl = document.getElementById('canvas-stat-groups');
+      const pEl = document.getElementById('canvas-stat-path');
+
+      if (nEl) nEl.innerText = `${c.nodeCount} Nodes`;
+      if (eEl) eEl.innerText = `${c.edgeCount} Edges`;
+      if (gEl) gEl.innerText = `${c.groupCount} Groups`;
+      if (pEl) pEl.innerText = c.relPath || c.name;
+
+      const svgContainer = document.getElementById('canvas-svg-container');
+      if (svgContainer) {
+        svgContainer.innerHTML = generateCanvasSvg(c);
+      }
+
+      const jsonPreview = document.getElementById('canvas-json-preview');
+      if (jsonPreview) {
+        jsonPreview.innerText = JSON.stringify({
+          canvas: c.name,
+          nodes: c.nodes,
+          edges: c.edges
+        }, null, 2);
+      }
+    }
+
+    function generateCanvasSvg(canvas) {
+      const nodes = canvas.nodes || [];
+      const edges = canvas.edges || [];
+      if (nodes.length === 0) {
+        return '<div style="padding:40px; text-align:center; color:#6B7280; font-size:12px;">No nodes in canvas</div>';
+      }
+
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      nodes.forEach(n => {
+        const x = n.x || 0, y = n.y || 0, w = n.width || 250, h = n.height || 140;
+        if (x < minX) minX = x;
+        if (y < minY) minY = y;
+        if (x + w > maxX) maxX = x + w;
+        if (y + h > maxY) maxY = y + h;
+      });
+
+      const pad = 60;
+      minX -= pad; minY -= pad;
+      maxX += pad; maxY += pad;
+      const width = Math.max(maxX - minX, 400);
+      const height = Math.max(maxY - minY, 300);
+
+      const colorMap = {
+        '1': '#EF4444',
+        '2': '#F97316',
+        '3': '#F59E0B',
+        '4': '#10B981',
+        '5': '#06B6D4',
+        '6': '#A855F7',
+      };
+
+      const nodeCenters = {};
+      nodes.forEach(n => {
+        nodeCenters[n.id] = {
+          cx: (n.x || 0) + (n.width || 250) / 2,
+          cy: (n.y || 0) + (n.height || 140) / 2
+        };
+      });
+
+      const edgeSvg = edges.map(e => {
+        const from = nodeCenters[e.fromNode];
+        const to = nodeCenters[e.toNode];
+        if (!from || !to) return '';
+        const strokeColor = colorMap[e.color] || '#A855F7';
+        const dx = to.cx - from.cx;
+        const dy = to.cy - from.cy;
+        const cx1 = from.cx + dx * 0.4;
+        const cy1 = from.cy;
+        const cx2 = to.cx - dx * 0.4;
+        const cy2 = to.cy;
+        return `
+          <path d="M ${from.cx} ${from.cy} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${to.cx} ${to.cy}"
+                fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-opacity="0.65" marker-end="url(#arrow)" />
+        `;
+      }).join('');
+
+      const nodeSvg = nodes.map(n => {
+        const x = n.x || 0, y = n.y || 0, w = n.width || 250, h = n.height || 140;
+        const stroke = colorMap[n.color] || (n.color && n.color.startsWith('#') ? n.color : '#00E5FF');
+        if (n.type === 'group') {
+          return `
+            <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="12"
+                  fill="${stroke}" fill-opacity="0.07" stroke="${stroke}" stroke-width="2" stroke-dasharray="6,4" />
+            <text x="${x + 14}" y="${y + 24}" fill="${stroke}" font-size="13" font-family="sans-serif" font-weight="700">
+              ${escapeHtml((n.label || 'Group').slice(0, 40))}
+            </text>
+          `;
+        }
+
+        const title = n.file || (n.text ? n.text.split('\n')[0].replace(/^#+\s*/, '') : (n.url || n.id));
+        const sub = n.type === 'file' ? '📄 File' : (n.type === 'text' ? '📝 Text' : '🔗 Link');
+
+        return `
+          <g transform="translate(${x}, ${y})">
+            <rect width="${w}" height="${h}" rx="8"
+                  fill="#14141E" fill-opacity="0.92" stroke="${stroke}" stroke-width="1.8" />
+            <rect x="0" y="0" width="${w}" height="26" rx="8" fill="${stroke}" fill-opacity="0.25" />
+            <text x="10" y="18" fill="#F8FAFC" font-size="11" font-family="monospace" font-weight="700">
+              ${escapeHtml(sub)}
+            </text>
+            <text x="10" y="46" fill="#F1F5F9" font-size="12" font-family="sans-serif" font-weight="600">
+              ${escapeHtml((title || '').slice(0, 36))}
+            </text>
+          </g>
+        `;
+      }).join('');
+
+      return `
+        <svg viewBox="${minX} ${minY} ${width} ${height}" style="width:100%; height:100%; min-height:360px; max-height:480px; display:block;">
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#E879F9" opacity="0.85" />
+            </marker>
+          </defs>
+          ${edgeSvg}
+          ${nodeSvg}
+        </svg>
+      `;
+    }
+
+    function switchCanvasSubTab(tab) {
+      const btnSvg = document.getElementById('btn-canvas-tab-svg');
+      const btnJson = document.getElementById('btn-canvas-tab-json');
+      const svgCon = document.getElementById('canvas-svg-container');
+      const jsonPre = document.getElementById('canvas-json-preview');
+
+      if (tab === 'svg') {
+        if (btnSvg) btnSvg.classList.add('active');
+        if (btnJson) btnJson.classList.remove('active');
+        if (svgCon) svgCon.style.display = 'block';
+        if (jsonPre) jsonPre.style.display = 'none';
+      } else {
+        if (btnSvg) btnSvg.classList.remove('active');
+        if (btnJson) btnJson.classList.add('active');
+        if (svgCon) svgCon.style.display = 'none';
+        if (jsonPre) jsonPre.style.display = 'block';
+      }
+    }
+
+    function copyActiveCanvasJson() {
+      if (!window.__activeCanvas) return;
+      const text = JSON.stringify({
+        nodes: window.__activeCanvas.nodes,
+        edges: window.__activeCanvas.edges
+      }, null, 2);
+      navigator.clipboard.writeText(text).then(() => {
+        showToast(`📋 Copied ${window.__activeCanvas.name} JSON Canvas to clipboard!`, 'success');
+      }).catch(() => {
+        showToast('Failed to copy JSON', 'error');
+      });
+    }
+
+    async function fetchObsidianBases() {
+      try {
+        const res = await fetch(`${API_BASE}/api/obsidian/bases`);
+        if (res.ok) {
+          const data = await res.json();
+          window.vaultBases = data.bases || [];
+          const select = document.getElementById('base-select');
+          if (select) {
+            select.innerHTML = window.vaultBases.map(b => `
+              <option value="${escapeHtml(b.name)}">${escapeHtml(b.name)} (${b.viewCount} views)</option>
+            `).join('');
+            const defaultBase = window.vaultBases.find(b => b.name.includes('Tools')) || window.vaultBases[0];
+            if (defaultBase) {
+              select.value = defaultBase.name;
+              renderBaseView(defaultBase);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch obsidian bases:', err);
+      }
+    }
+
+    function onSelectBase(name) {
+      const b = (window.vaultBases || []).find(base => base.name === name);
+      if (b) renderBaseView(b);
+    }
+
+    function renderBaseView(b) {
+      if (!b) return;
+      window.__activeBase = b;
+
+      const vEl = document.getElementById('base-stat-views');
+      const fEl = document.getElementById('base-stat-formulas');
+      const pEl = document.getElementById('base-stat-props');
+      const pathEl = document.getElementById('base-stat-path');
+
+      const formulasCount = Object.keys(b.formulas || {}).length;
+      const propsCount = Object.keys(b.properties || {}).length;
+
+      if (vEl) vEl.innerText = `${b.viewCount || (b.views || []).length} Views`;
+      if (fEl) fEl.innerText = `${formulasCount} Formulas`;
+      if (pEl) pEl.innerText = `${propsCount} Properties`;
+      if (pathEl) pathEl.innerText = b.relPath || b.name;
+
+      const parsedCon = document.getElementById('base-parsed-container');
+      if (parsedCon) {
+        const viewsHtml = (b.views || []).map(v => `
+          <div style="background:rgba(18,18,28,0.85); border:1px solid rgba(16,185,129,0.3); border-radius:8px; padding:10px 12px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+              <span style="font-weight:700; font-size:12.5px; color:#A7F3D0;">${v.type === 'cards' ? '▣ Cards View' : '▦ Table View'}: ${escapeHtml(v.name || 'Default View')}</span>
+              <span class="wiki-tag-pill" style="color:#10B981; border-color:rgba(16,185,129,0.3);">${v.type || 'table'}</span>
+            </div>
+            ${v.groupBy ? `<div style="font-size:11px; color:#9AA0A6;">Grouped by: <code style="color:#F5D0FE;">${escapeHtml(v.groupBy.property || '')}</code></div>` : ''}
+            ${v.order ? `<div style="font-size:11px; color:#9AA0A6;">Columns: <span style="font-family:monospace; color:#E2E8F0;">${(v.order || []).slice(0, 5).join(', ')}</span></div>` : ''}
+          </div>
+        `).join('');
+
+        const formulasList = Object.entries(b.formulas || {}).map(([key, expr]) => `
+          <div style="display:flex; align-items:flex-start; gap:8px; font-size:11.5px; background:rgba(14,14,20,0.8); padding:6px 10px; border-radius:6px; border:1px solid #22222E;">
+            <span style="color:#D4AF37; font-family:monospace; font-weight:700; min-width:110px;">${escapeHtml(key)}</span>
+            <code style="color:#CBD5E1; font-family:monospace; word-break:break-all;">${escapeHtml(expr)}</code>
+          </div>
+        `).join('');
+
+        parsedCon.innerHTML = `
+          <div>
+            <div style="font-size:12px; font-weight:700; text-transform:uppercase; color:#10B981; margin-bottom:8px;">Configured Reactive Views</div>
+            <div style="display:flex; flex-direction:column; gap:8px;">${viewsHtml || '<div style="color:#6B7280; font-size:12px;">No views defined</div>'}</div>
+          </div>
+          <div style="margin-top:10px;">
+            <div style="font-size:12px; font-weight:700; text-transform:uppercase; color:#D4AF37; margin-bottom:8px;">Computed Formulas</div>
+            <div style="display:flex; flex-direction:column; gap:6px;">${formulasList || '<div style="color:#6B7280; font-size:12px;">No formulas defined</div>'}</div>
+          </div>
+        `;
+      }
+
+      const yamlPreview = document.getElementById('base-yaml-preview');
+      if (yamlPreview) {
+        yamlPreview.innerText = b.rawYaml || '';
+      }
+    }
+
+    function switchBaseSubTab(tab) {
+      const btnParsed = document.getElementById('btn-base-tab-parsed');
+      const btnYaml = document.getElementById('btn-base-tab-yaml');
+      const parsedCon = document.getElementById('base-parsed-container');
+      const yamlPre = document.getElementById('base-yaml-preview');
+
+      if (tab === 'parsed') {
+        if (btnParsed) btnParsed.classList.add('active');
+        if (btnYaml) btnYaml.classList.remove('active');
+        if (parsedCon) parsedCon.style.display = 'flex';
+        if (yamlPre) yamlPre.style.display = 'none';
+      } else {
+        if (btnParsed) btnParsed.classList.remove('active');
+        if (btnYaml) btnYaml.classList.add('active');
+        if (parsedCon) parsedCon.style.display = 'none';
+        if (yamlPre) yamlPre.style.display = 'block';
+      }
+    }
+
+    function copyActiveBaseYaml() {
+      if (!window.__activeBase) return;
+      navigator.clipboard.writeText(window.__activeBase.rawYaml || '').then(() => {
+        showToast(`📋 Copied ${window.__activeBase.name} YAML Base to clipboard!`, 'success');
+      }).catch(() => {
+        showToast('Failed to copy YAML', 'error');
       });
     }
 

@@ -154,3 +154,54 @@ def test_obsidian_sync_post(obsidian_server: tuple[MemoryUIServer, str, MemoryDa
     assert "wikiArticles" in data
     assert len(data["canvases"]) >= 6
     assert len(data["bases"]) >= 5
+
+
+def test_obsidian_canvases_get(obsidian_server: tuple[MemoryUIServer, str, MemoryDaemon]):
+    """Test GET /api/obsidian/canvases returns parsed JSON Canvas 1.0 topologies."""
+    _, base_url, _ = obsidian_server
+    status, _, body = _http_get(f"{base_url}/api/obsidian/canvases")
+    assert status == 200
+    data = json.loads(body.decode("utf-8"))
+    assert data["ok"] is True
+    assert "count" in data
+    assert data["count"] >= 14
+    assert "canvases" in data
+    canvases = data["canvases"]
+    names = [c["name"] for c in canvases]
+    assert any("Pillars" in n for n in names)
+    assert any("Vaelor" in n for n in names)
+    assert any("Marketplace" in n for n in names)
+    for c in canvases:
+        assert "name" in c
+        assert "relPath" in c
+        assert "nodeCount" in c
+        assert "edgeCount" in c
+        assert "groupCount" in c
+        assert "nodes" in c
+        assert "edges" in c
+
+
+def test_obsidian_bases_get(obsidian_server: tuple[MemoryUIServer, str, MemoryDaemon]):
+    """Test GET /api/obsidian/bases returns parsed Obsidian Bases YAML databases."""
+    _, base_url, _ = obsidian_server
+    status, _, body = _http_get(f"{base_url}/api/obsidian/bases")
+    assert status == 200
+    data = json.loads(body.decode("utf-8"))
+    assert data["ok"] is True
+    assert "count" in data
+    assert data["count"] >= 18
+    assert "bases" in data
+    bases = data["bases"]
+    names = [b["name"] for b in bases]
+    assert any("Tools" in n for n in names)
+    assert any("Fleet" in n for n in names)
+    assert any("Wiki" in n for n in names)
+    for b in bases:
+        assert "name" in b
+        assert "relPath" in b
+        assert "viewCount" in b
+        assert "views" in b
+        assert "formulas" in b
+        assert "properties" in b
+        assert "rawYaml" in b
+

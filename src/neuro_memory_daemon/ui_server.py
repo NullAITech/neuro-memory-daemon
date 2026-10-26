@@ -584,6 +584,76 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
             })
             return
 
+        # Obsidian JSON Canvas 1.0 List & Detail Endpoint
+        elif path in ("/api/obsidian/canvases", "/v1/obsidian/canvases"):
+            vault_dir = Path.home() / "Documents" / "Obsidian Vault"
+            canvases = []
+            if vault_dir.exists():
+                for p in sorted(vault_dir.rglob("*.canvas")):
+                    if any(part.startswith(".") for part in p.parts) or not p.is_file():
+                        continue
+                    try:
+                        cdata = json.loads(safe_read_text(p))
+                        nodes = cdata.get("nodes", []) if isinstance(cdata, dict) else []
+                        edges = cdata.get("edges", []) if isinstance(cdata, dict) else []
+                        groups = [n for n in nodes if isinstance(n, dict) and n.get("type") == "group"]
+                        rel_path = str(p.relative_to(vault_dir))
+                        canvases.append({
+                            "name": p.name,
+                            "relPath": rel_path,
+                            "nodeCount": len(nodes),
+                            "edgeCount": len(edges),
+                            "groupCount": len(groups),
+                            "nodes": nodes,
+                            "edges": edges,
+                        })
+                    except Exception:
+                        pass
+            self._send_json({
+                "ok": True,
+                "count": len(canvases),
+                "canvases": canvases,
+            })
+            return
+
+        # Obsidian Bases YAML List & Detail Endpoint
+        elif path in ("/api/obsidian/bases", "/v1/obsidian/bases"):
+            vault_dir = Path.home() / "Documents" / "Obsidian Vault"
+            bases = []
+            if vault_dir.exists():
+                for p in sorted(vault_dir.rglob("*.base")):
+                    if any(part.startswith(".") for part in p.parts) or not p.is_file():
+                        continue
+                    try:
+                        raw_yaml = safe_read_text(p)
+                        import yaml
+                        bdata = yaml.safe_load(raw_yaml)
+                        if not isinstance(bdata, dict):
+                            bdata = {}
+                        views = bdata.get("views", [])
+                        formulas = bdata.get("formulas", {})
+                        properties = bdata.get("properties", {})
+                        filters = bdata.get("filters", {})
+                        rel_path = str(p.relative_to(vault_dir))
+                        bases.append({
+                            "name": p.name,
+                            "relPath": rel_path,
+                            "viewCount": len(views) if isinstance(views, list) else 0,
+                            "views": views,
+                            "formulas": formulas,
+                            "properties": properties,
+                            "filters": filters,
+                            "rawYaml": raw_yaml,
+                        })
+                    except Exception:
+                        pass
+            self._send_json({
+                "ok": True,
+                "count": len(bases),
+                "bases": bases,
+            })
+            return
+
         # Serve Static UI Files
         self._serve_static(path)
 
