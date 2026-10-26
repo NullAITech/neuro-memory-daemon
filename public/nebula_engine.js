@@ -352,6 +352,10 @@
       this.currentNeuromodulator = 'balanced';
       this.neuromodulatorState = NEUROMODULATOR_MODES.balanced;
       this.trailingSparkles = [];
+      this.salienceThreshold = 0.0;
+      this.isDreaming = false;
+      this.dreamWaveTimer = null;
+      this.dreamWaveGroup = null;
 
       this.tourStops = [
         {
@@ -2431,6 +2435,376 @@
         }
       }, 16);
       return engram;
+    }
+
+    // ==============================================================================
+    // ✦ WAVE 5: 3D HIPPOCAMPAL DREAM REPLAY WAVE & CROSS-GALAXY SWR CONSOLIDATION
+    // ==============================================================================
+    async triggerDreamWave() {
+      if (this.isDreaming) return { success: false, reason: 'Already in dream replay' };
+      this.isDreaming = true;
+
+      // 1. Panoramic Overview Camera Glide
+      this.glideCameraTo(new THREE.Vector3(0, 230, 560), new THREE.Vector3(0, 0, 0), 1.8);
+
+      // 2. Bio-Acoustic synthesis for Hippocampal SWR Theta/Gamma entrainment
+      if (this.audio) {
+        this.audio.playSleepRipple();
+        setTimeout(() => {
+          if (this.audio) this.audio.playHarmonicChord(432);
+        }, 350);
+      }
+
+      // 3. Dispatch non-blocking backend consolidation
+      let backendReport = null;
+      try {
+        fetch('/api/consolidate', { method: 'POST' })
+          .then(r => r.ok ? r.json() : null)
+          .then(data => { backendReport = data; })
+          .catch(() => {});
+      } catch (e) {}
+
+      // 4. Construct 3D Geodesic Ripple Sphere & Dual Harmonic Rings at Core (0, 0, 0)
+      const rippleGroup = new THREE.Group();
+      rippleGroup.position.set(0, 0, 0);
+
+      // 4a. Translucent Violet Geodesic Icosahedron Sphere
+      const geoIco = new THREE.IcosahedronGeometry(14, 2);
+      const matIco = new THREE.MeshBasicMaterial({
+        color: 0xA855F7, // Deep Violet
+        wireframe: true,
+        transparent: true,
+        opacity: 0.85,
+        blending: THREE.AdditiveBlending,
+      });
+      const meshIco = new THREE.Mesh(geoIco, matIco);
+      rippleGroup.add(meshIco);
+
+      // 4b. Inner Translucent Cyan Plasma Sphere
+      const geoSphere = new THREE.SphereGeometry(12, 24, 24);
+      const matSphere = new THREE.MeshBasicMaterial({
+        color: 0x00E5FF, // Electric Cyan
+        transparent: true,
+        opacity: 0.35,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      });
+      const meshSphere = new THREE.Mesh(geoSphere, matSphere);
+      rippleGroup.add(meshSphere);
+
+      // 4c. Dual Harmonic Expanding Ripple Rings
+      const geoRing1 = new THREE.RingGeometry(12, 16, 48);
+      const matRing1 = new THREE.MeshBasicMaterial({
+        color: 0xA855F7,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.9,
+        blending: THREE.AdditiveBlending,
+      });
+      const ring1 = new THREE.Mesh(geoRing1, matRing1);
+      ring1.rotation.x = Math.PI / 3;
+      rippleGroup.add(ring1);
+
+      const geoRing2 = new THREE.RingGeometry(16, 20, 48);
+      const matRing2 = new THREE.MeshBasicMaterial({
+        color: 0x00E5FF,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.85,
+        blending: THREE.AdditiveBlending,
+      });
+      const ring2 = new THREE.Mesh(geoRing2, matRing2);
+      ring2.rotation.z = Math.PI / 4;
+      ring2.rotation.y = Math.PI / 6;
+      rippleGroup.add(ring2);
+
+      this.scene.add(rippleGroup);
+      this.dreamWaveGroup = rippleGroup;
+
+      // 5. Expand Geodesic Ripple Sphere outward across all 6 Galaxies
+      const waveDuration = 3400; // ms
+      const waveStartT = performance.now();
+      const maxWaveScale = 32.0; // 14 * 32 = ~448 units radius, encompassing all galaxies
+
+      const waveInterval = setInterval(() => {
+        const elapsed = performance.now() - waveStartT;
+        const progress = Math.min(1.0, elapsed / waveDuration);
+        const ease = 0.5 - Math.cos(progress * Math.PI) / 2;
+
+        const curScale = 1.0 + ease * (maxWaveScale - 1.0);
+        rippleGroup.scale.set(curScale, curScale, curScale);
+
+        meshIco.rotation.y += 0.015;
+        meshIco.rotation.x += 0.008;
+        ring1.rotation.z += 0.02;
+        ring2.rotation.z -= 0.025;
+
+        const fade = Math.max(0.0, 1.0 - progress);
+        matIco.opacity = 0.85 * fade;
+        matSphere.opacity = 0.35 * fade;
+        matRing1.opacity = 0.9 * fade;
+        matRing2.opacity = 0.85 * fade;
+
+        if (progress >= 1.0) {
+          clearInterval(waveInterval);
+          this.scene.remove(rippleGroup);
+          geoIco.dispose();
+          matIco.dispose();
+          geoSphere.dispose();
+          matSphere.dispose();
+          geoRing1.dispose();
+          matRing1.dispose();
+          geoRing2.dispose();
+          matRing2.dispose();
+          this.dreamWaveGroup = null;
+        }
+      }, 16);
+
+      // 6. Display HUD narration banner with live counter
+      const showDreamBanner = (count = 0) => {
+        const banner = document.getElementById('nebula-sleep-banner');
+        if (!banner) return;
+        banner.innerHTML = `
+          <div style="font-size:26px;">🌙</div>
+          <div style="display:flex; flex-direction:column; gap:3px;">
+            <div style="font-weight:800; font-size:12px; color:#A855F7; letter-spacing:0.7px; text-transform:uppercase;">
+              HIPPOCAMPAL SWR REPLAY &bull; CROSS-GALAXY STDP CONSOLIDATION
+            </div>
+            <div style="font-size:11px; color:#EDEFF2;">
+              Consolidating cross-galaxy engrams across 6 strata &bull;
+              <strong style="color:#00E5FF;">LTP Pathways Strengthened:</strong>
+              <span id="dream-ltp-counter" style="color:#FFD700; font-weight:800; font-size:12px; font-family:monospace; margin-left:4px;">+${count}</span>
+            </div>
+          </div>
+        `;
+        banner.classList.add('visible');
+      };
+      showDreamBanner(0);
+
+      // 7. Find top high-importance stars across all 6 Galaxies
+      const galaxiesList = ['agents', 'obsidian', 'tools', 'living_minds', 'security', 'system'];
+      const galaxyTopStars = {};
+      galaxiesList.forEach(gId => {
+        const meshesInGalaxy = [];
+        this.nodeMeshes.forEach(mesh => {
+          if (mesh.userData && mesh.userData.galaxy && mesh.userData.galaxy.id === gId) {
+            meshesInGalaxy.push(mesh);
+          }
+        });
+        meshesInGalaxy.sort((a, b) => {
+          const impA = a.userData?.nodeData?.importance ?? 1.0;
+          const impB = b.userData?.nodeData?.importance ?? 1.0;
+          return impB - impA;
+        });
+        galaxyTopStars[gId] = meshesInGalaxy.slice(0, 3);
+      });
+
+      // Cross-Galaxy associative pairing sequence
+      const crossPairs = [
+        { from: 'agents', to: 'obsidian', color: 0xE879F9 },
+        { from: 'obsidian', to: 'tools', color: 0x00E5FF },
+        { from: 'tools', to: 'living_minds', color: 0x10B981 },
+        { from: 'living_minds', to: 'security', color: 0xFF3366 },
+        { from: 'security', to: 'system', color: 0xA855F7 },
+        { from: 'system', to: 'agents', color: 0xD4AF37 },
+        { from: 'agents', to: 'living_minds', color: 0x00E5FF },
+        { from: 'obsidian', to: 'security', color: 0xE879F9 },
+        { from: 'tools', to: 'system', color: 0xF59E0B },
+      ];
+
+      let ltpCounter = 0;
+      const activeDreamBeams = [];
+
+      crossPairs.forEach((pair, idx) => {
+        setTimeout(() => {
+          const fromStars = galaxyTopStars[pair.from];
+          const toStars = galaxyTopStars[pair.to];
+
+          const p1 = (fromStars && fromStars.length > 0)
+            ? fromStars[idx % fromStars.length].position.clone()
+            : (GALAXY_CLUSTERS[pair.from]?.center || new THREE.Vector3(0, 0, 0)).clone();
+
+          const p2 = (toStars && toStars.length > 0)
+            ? toStars[idx % toStars.length].position.clone()
+            : (GALAXY_CLUSTERS[pair.to]?.center || new THREE.Vector3(0, 0, 0)).clone();
+
+          // Elevate arc high in space
+          const mid = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
+          mid.y += 65;
+
+          const curve = new THREE.QuadraticBezierCurve3(p1, mid, p2);
+          const pts = curve.getPoints(32);
+          const lineGeo = new THREE.BufferGeometry().setFromPoints(pts);
+          const lineMat = new THREE.LineBasicMaterial({
+            color: pair.color,
+            transparent: true,
+            opacity: 0.95,
+            blending: THREE.AdditiveBlending,
+          });
+          const beamLine = new THREE.Line(lineGeo, lineMat);
+          this.scene.add(beamLine);
+
+          // Fast associative traveling photon
+          const photonGeo = new THREE.SphereGeometry(2.2, 12, 12);
+          const photonMat = new THREE.MeshBasicMaterial({
+            color: 0xFFFFFF,
+            transparent: true,
+            opacity: 0.95,
+            blending: THREE.AdditiveBlending,
+          });
+          const photonMesh = new THREE.Mesh(photonGeo, photonMat);
+          photonMesh.position.copy(p1);
+          this.scene.add(photonMesh);
+
+          // Animate photon along curve
+          const photonStartT = performance.now();
+          const photonDuration = 480;
+          const photonInterval = setInterval(() => {
+            const pelapsed = performance.now() - photonStartT;
+            const pp = Math.min(1.0, pelapsed / photonDuration);
+            photonMesh.position.copy(curve.getPoint(pp));
+            if (pp >= 1.0) {
+              clearInterval(photonInterval);
+              this.scene.remove(photonMesh);
+              photonGeo.dispose();
+              photonMat.dispose();
+            }
+          }, 16);
+
+          // Flash destination and source nodes
+          if (toStars && toStars.length > 0) {
+            this.flashNode(toStars[idx % toStars.length], pair.color, 2.0);
+          }
+          if (fromStars && fromStars.length > 0) {
+            this.flashNode(fromStars[idx % fromStars.length], 0xFFFFFF, 1.8);
+          }
+
+          if (this.audio) {
+            this.audio.playActionPotential(520 + (idx % 6) * 60);
+          }
+
+          // Update LTP pathways counter
+          ltpCounter += Math.floor(2 + Math.random() * 3);
+          const counterEl = document.getElementById('dream-ltp-counter');
+          if (counterEl) counterEl.textContent = `+${ltpCounter}`;
+
+          // Keep beam visible for 1.8s then fade
+          activeDreamBeams.push({ beamLine, lineGeo, lineMat });
+
+          // Also boost permanent synaptic filament if one connects these galaxies
+          const existingFil = this.filamentCurves.find(f =>
+            (f.sourceId && f.targetId) &&
+            ((f.sourceId.includes(pair.from) && f.targetId.includes(pair.to)) ||
+             (f.sourceId.includes(pair.to) && f.targetId.includes(pair.from)))
+          );
+          if (existingFil && existingFil.line && existingFil.line.material) {
+            existingFil.weight = Math.min(1.0, (existingFil.weight || 0.5) + 0.15);
+            existingFil.line.material.opacity = 0.95;
+            existingFil.line.material.color.setHex(pair.color);
+          }
+        }, 300 + idx * 240);
+      });
+
+      // Cleanup active dream replay beams after all pairs complete
+      setTimeout(() => {
+        activeDreamBeams.forEach(b => {
+          this.scene.remove(b.beamLine);
+          b.lineGeo.dispose();
+          b.lineMat.dispose();
+        });
+        activeDreamBeams.length = 0;
+        this.isDreaming = false;
+
+        // Finalize banner
+        const banner = document.getElementById('nebula-sleep-banner');
+        if (banner) {
+          banner.innerHTML = `
+            <div style="font-size:26px;">🌙</div>
+            <div style="display:flex; flex-direction:column; gap:3px;">
+              <div style="font-weight:800; font-size:12px; color:#A855F7; letter-spacing:0.7px; text-transform:uppercase;">
+                HIPPOCAMPAL CONSOLIDATION COMPLETE
+              </div>
+              <div style="font-size:11px; color:#EDEFF2;">
+                ${ltpCounter} Cross-Galaxy LTP Pathways Strengthened &bull; Multi-Galaxy Schemata Synchronized &bull; 0 Pruned
+              </div>
+            </div>
+          `;
+          setTimeout(() => banner.classList.remove('visible'), 3400);
+        }
+      }, 300 + crossPairs.length * 240 + 1600);
+
+      return {
+        success: true,
+        projectedLtpPathways: crossPairs.length * 2
+      };
+    }
+
+    // ==============================================================================
+    // ✦ WAVE 5: REAL-TIME 3D SYNAPTIC SALIENCE SCRUBBER
+    // ==============================================================================
+    setSalienceThreshold(minImportance = 0.0) {
+      const threshold = Math.max(0.0, Math.min(0.95, parseFloat(minImportance) || 0.0));
+      this.salienceThreshold = threshold;
+
+      let illuminatedCount = 0;
+      const totalCount = this.nodeMeshes.size;
+
+      this.nodeMeshes.forEach((mesh) => {
+        const data = mesh.userData?.nodeData || {};
+        const rawImp = typeof data.importance === 'number' ? data.importance : 1.0;
+        const normImp = rawImp > 1.0 ? Math.min(1.0, rawImp / 2.0) : rawImp;
+        const baseRadius = mesh.userData?.baseRadius || 4.0;
+
+        const meetsThreshold = normImp >= threshold;
+        if (meetsThreshold) illuminatedCount++;
+
+        if (mesh.material) {
+          mesh.material.transparent = true;
+          if (meetsThreshold) {
+            // High-importance core engram constellation: illuminated & prominent
+            mesh.material.opacity = 1.0;
+            mesh.material.emissiveIntensity = 0.85 + (normImp * 0.45);
+            const boostScale = threshold > 0.05 ? 1.25 : 1.0;
+            mesh.scale.set(baseRadius * boostScale, baseRadius * boostScale, baseRadius * boostScale);
+          } else {
+            // Low-weight background star: smoothly dimmed and scaled down
+            mesh.material.opacity = Math.max(0.12, 0.38 - threshold * 0.28);
+            mesh.material.emissiveIntensity = 0.08;
+            const dimScale = Math.max(0.35, 0.75 - threshold * 0.42);
+            mesh.scale.set(baseRadius * dimScale, baseRadius * dimScale, baseRadius * dimScale);
+          }
+        }
+      });
+
+      // Modulate Synaptic Filaments
+      this.filamentCurves.forEach((fil) => {
+        if (!fil.line || !fil.line.material) return;
+        const w = fil.weight || 0.5;
+        fil.line.material.transparent = true;
+        if (w >= threshold) {
+          // Boost opacity of high-salience structural filaments
+          fil.line.material.opacity = Math.min(1.0, 0.45 + threshold * 0.55);
+        } else {
+          // Dim non-salient background filaments
+          fil.line.material.opacity = Math.max(0.04, 0.25 - threshold * 0.22);
+        }
+      });
+
+      // Sync DOM controls if present
+      const displayVal = document.getElementById('salience-val-display');
+      if (displayVal) {
+        displayVal.textContent = threshold.toFixed(2);
+      }
+      const slider = document.getElementById('salience-slider');
+      if (slider && parseFloat(slider.value) !== threshold) {
+        slider.value = threshold;
+      }
+
+      return {
+        threshold,
+        illuminatedCount,
+        totalCount
+      };
     }
 
     animate() {

@@ -19,6 +19,8 @@ import threading
 import time
 import urllib.parse
 import webbrowser
+import re
+import subprocess
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from socketserver import ThreadingMixIn
@@ -45,6 +47,74 @@ def _safe_rel(raw: str) -> str:
     if any(p == ".." for p in parts) or ":" in (parts[0] if parts else ""):
         return ""
     return "/".join(parts)
+
+
+def _parse_wiki_article(path: Path) -> Dict[str, Any]:
+    """Parse Obsidian Flavored Markdown Wiki page with YAML frontmatter & callouts."""
+    text = safe_read_text(path)
+    title = path.stem
+    created = ""
+    updated = ""
+    confidence = 0.99
+    stdp_engrams = 0
+    tags = []
+    category = "LLM-Wiki"
+    status = "CANONICAL"
+
+    body = text
+    fm_match = re.match(r"^---\s*\n(.*?)\n---\s*\n(.*)$", text, re.DOTALL)
+    if fm_match:
+        fm_text = fm_match.group(1)
+        body = fm_match.group(2)
+        for line in fm_text.splitlines():
+            if ":" in line:
+                k, v = line.split(":", 1)
+                k = k.strip()
+                v = v.strip().strip('"').strip("'")
+                if k == "title" and v:
+                    title = v
+                elif k == "created":
+                    created = v
+                elif k == "updated":
+                    updated = v
+                elif k == "confidence":
+                    try:
+                        confidence = float(v)
+                    except ValueError:
+                        pass
+                elif k == "stdp_engrams":
+                    try:
+                        stdp_engrams = int(v)
+                    except ValueError:
+                        pass
+                elif k == "status":
+                    status = v
+                elif k == "category":
+                    category = v
+                elif k == "tags":
+                    tags = re.findall(r"[\w-]+", v)
+
+    exec_summary = ""
+    summary_match = re.search(r">\s*\[!abstract\]\s*(?:Executive Summary)?\s*\n((?:>.*\n?)+)", text)
+    if summary_match:
+        summary_raw = summary_match.group(1)
+        exec_summary = "\n".join(re.sub(r"^>\s?", "", l) for l in summary_raw.splitlines()).strip()
+
+    return {
+        "title": title,
+        "filename": path.name,
+        "path": f"06-Wiki/{path.name}",
+        "created": created,
+        "updated": updated,
+        "confidence": confidence,
+        "stdp_engrams": stdp_engrams,
+        "tags": tags,
+        "category": category,
+        "status": status,
+        "executive_summary": exec_summary,
+        "body": body.strip(),
+        "size": path.stat().st_size if path.exists() else len(text.encode("utf-8")),
+    }
 
 
 class EventBroadcaster:
@@ -389,6 +459,131 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
             })
             return
 
+        # Obsidian Karpathy LLM Wiki List Endpoint
+        elif path in ("/api/obsidian/wiki", "/v1/obsidian/wiki"):
+            vault_dir = Path.home() / "Documents" / "Obsidian Vault"
+            wiki_dir = vault_dir / "06-Wiki"
+            articles = []
+            if wiki_dir.exists():
+                for p in sorted(wiki_dir.glob("*.md")):
+                    if not p.is_file() or p.name.startswith("."):
+                        continue
+                    articles.append(_parse_wiki_article(p))
+            self._send_json({
+                "ok": True,
+                "count": len(articles),
+                "articles": articles
+            })
+            return
+
+        # Obsidian Second Brain Doctor Audit Endpoint
+        elif path in ("/api/obsidian/audit", "/v1/obsidian/audit"):
+            vault_dir = Path.home() / "Documents" / "Obsidian Vault"
+            canvases = []
+            bases = []
+            notes = []
+            total_wikilinks = 0
+            connected_notes = 0
+            canvas_valid = 0
+            base_valid = 0
+
+            if vault_dir.exists():
+                for p in vault_dir.rglob("*"):
+                    if any(part.startswith(".") for part in p.parts) or not p.is_file():
+                        continue
+                    if p.suffix.lower() == ".canvas":
+                        canvases.append(p)
+                        try:
+                            cdata = json.loads(safe_read_text(p))
+                            if isinstance(cdata, dict) and "nodes" in cdata and "edges" in cdata:
+                                canvas_valid += 1
+                        except Exception:
+                            pass
+                    elif p.suffix.lower() == ".base":
+                        bases.append(p)
+                        try:
+                            import yaml
+                            bdata = yaml.safe_load(safe_read_text(p))
+                            if isinstance(bdata, dict) and "views" in bdata:
+                                base_valid += 1
+                        except Exception:
+                            pass
+                    elif p.suffix.lower() == ".md":
+                        notes.append(p)
+                        try:
+                            txt = safe_read_text(p)
+                            links = re.findall(r"\[\[([^\]|#]+)", txt)
+                            if links:
+                                connected_notes += 1
+                                total_wikilinks += len(links)
+                        except Exception:
+                            pass
+
+            wiki_files = list((vault_dir / "06-Wiki").glob("*.md")) if (vault_dir / "06-Wiki").exists() else []
+            conn_pct = round((connected_notes / len(notes) * 100) if notes else 100.0, 1)
+            score = 100
+            if len(canvases) != canvas_valid:
+                score -= min(10 * (len(canvases) - canvas_valid), 40)
+            if len(bases) != base_valid:
+                score -= min(10 * (len(bases) - base_valid), 40)
+
+            self._send_json({
+                "ok": True,
+                "score": score,
+                "status": "PERFECT" if score == 100 else "DEGRADED",
+                "healthGrade": "✦ PERFECT" if score == 100 else "NEEDS_ATTENTION",
+                "canvasesValid": canvas_valid,
+                "totalCanvases": len(canvases),
+                "basesValid": base_valid,
+                "totalBases": len(bases),
+                "totalNotes": len(notes),
+                "totalWikilinks": total_wikilinks,
+                "connectivityPct": conn_pct,
+                "wikiCount": len(wiki_files),
+            })
+            return
+
+        # Obsidian Second Brain Inventory & Full Status Endpoint
+        elif path in ("/api/obsidian/status", "/v1/obsidian/status"):
+            vault_dir = Path.home() / "Documents" / "Obsidian Vault"
+            all_canvases = []
+            all_bases = []
+            wiki_articles = []
+            total_notes = 0
+            mocs = []
+            if vault_dir.exists():
+                for p in sorted(vault_dir.rglob("*")):
+                    if any(part.startswith(".") for part in p.parts) or not p.is_file():
+                        continue
+                    if p.suffix.lower() == ".canvas":
+                        all_canvases.append(p.name)
+                    elif p.suffix.lower() == ".base":
+                        all_bases.append(p.name)
+                    elif p.suffix.lower() == ".md":
+                        total_notes += 1
+                        if p.stem.startswith("MOC") or p.stem == "00 Home":
+                            mocs.append(p.stem)
+
+            wiki_dir = vault_dir / "06-Wiki"
+            if wiki_dir.exists():
+                for wp in sorted(wiki_dir.glob("*.md")):
+                    if wp.is_file() and not wp.name.startswith("."):
+                        wiki_articles.append(wp.name)
+
+            self._send_json({
+                "ok": True,
+                "vaultPath": str(vault_dir),
+                "totalNotes": total_notes,
+                "mocCount": len(mocs),
+                "canvasCount": len(all_canvases),
+                "baseCount": len(all_bases),
+                "wikiCount": len(wiki_articles),
+                "canvases": all_canvases,
+                "bases": all_bases,
+                "wikiArticles": wiki_articles,
+            })
+            return
+
         # Serve Static UI Files
         self._serve_static(path)
 
@@ -605,6 +800,52 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
             self._send_json(res, status=status_code)
             return
 
+        # Karpathy LLM Wiki Synthesis Endpoint
+        if path in ("/api/obsidian/wiki", "/v1/obsidian/wiki"):
+            topic = body.get("topic", "").strip()
+            if not topic:
+                self._send_json({"error": "Topic is required in JSON body: {\"topic\": \"...\"}"}, status=400)
+                return
+
+            cli_path = Path("/home/zoth/NullAITech/zoth-os/bin/zoth-second-brain")
+            vault_dir = Path.home() / "Documents" / "Obsidian Vault"
+            wiki_dir = vault_dir / "06-Wiki"
+            wiki_dir.mkdir(parents=True, exist_ok=True)
+
+            if cli_path.exists():
+                try:
+                    subprocess.run([str(cli_path), "wiki", topic], capture_output=True, text=True, timeout=25)
+                except Exception:
+                    pass
+
+            clean_name = re.sub(r'["\']', '', topic).strip()
+            target_file = wiki_dir / f"{clean_name}.md"
+            if not target_file.exists():
+                for p in wiki_dir.glob("*.md"):
+                    if clean_name.lower() in p.stem.lower() or p.stem.lower() in clean_name.lower():
+                        target_file = p
+                        break
+
+            if target_file.exists():
+                article = _parse_wiki_article(target_file)
+                daemon.store(
+                    text=f"[Karpathy LLM Wiki · [[{article['title']}]]] {article['executive_summary'][:280]}",
+                    tags=["wiki", "llm-wiki", "karpathy", article["title"].lower().replace(" ", "-")],
+                    importance=0.96,
+                    category="semantic",
+                    agent_id="obsidian-bridge"
+                )
+                EVENT_BROADCASTER.broadcast("obsidian_wiki_synthesized", {"topic": topic, "file": target_file.name})
+                self._send_json({
+                    "ok": True,
+                    "status": "synthesized",
+                    "topic": topic,
+                    "article": article
+                }, status=201)
+            else:
+                self._send_json({"error": f"Failed to synthesize article for topic: {topic}"}, status=500)
+            return
+
         # Two-Way Obsidian Second Brain <-> Neuro-Memory STDP Synchronization
         if path in ("/api/obsidian/sync", "/v1/obsidian/sync"):
             vault_dir = Path.home() / "Documents" / "Obsidian Vault"
@@ -622,7 +863,19 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
                         agent_id="obsidian-bridge",
                     )
                     ingested += 1
-            for artifact_name in ("Zoth Second Brain.canvas", "Vaelor & Sovereign Economy.canvas", "Zoth Plugin & Connector Marketplace.canvas", "Zoth Memory Stratum.base", "Zoth Fleet & Daemons.base"):
+            for artifact_name in (
+                "Zoth Second Brain.canvas",
+                "Vaelor & Sovereign Economy.canvas",
+                "Zoth Plugin & Connector Marketplace.canvas",
+                "Zoth 6 Mathematical Pillars.canvas",
+                "Zoth Autonomous Agents & Hermes Fleet.canvas",
+                "Netrunner Cyber-Cortex Knowledge Map.canvas",
+                "Zoth Memory Stratum.base",
+                "Zoth Fleet & Daemons.base",
+                "Zoth 71 Sovereign Tools.base",
+                "Zoth Autonomous Agents.base",
+                "Zoth LLM Wiki Index.base"
+            ):
                 art_file = vault_dir / artifact_name
                 if art_file.exists():
                     snippet = safe_read_text(art_file)[:280].replace("\n", " ").strip()
@@ -635,14 +888,18 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
                     )
                     ingested += 1
             EVENT_BROADCASTER.broadcast("obsidian_synced", {"ingested": ingested, "vault": str(vault_dir)})
+            all_canvases = sorted(p.name for p in vault_dir.glob("*.canvas"))
+            all_bases = sorted(p.name for p in vault_dir.glob("*.base"))
+            wiki_articles = sorted(p.name for p in (vault_dir / "06-Wiki").glob("*.md")) if (vault_dir / "06-Wiki").exists() else []
             self._send_json({
                 "ok": True,
                 "status": "synced",
                 "ingestedFromVault": ingested,
                 "totalMemories": len(daemon.nodes),
                 "vaultPath": str(vault_dir),
-                "canvases": ["Zoth Second Brain.canvas", "Vaelor & Sovereign Economy.canvas", "Zoth Plugin & Connector Marketplace.canvas"],
-                "bases": ["Zoth Memory Stratum.base", "Zoth Fleet & Daemons.base"],
+                "canvases": all_canvases,
+                "bases": all_bases,
+                "wikiArticles": wiki_articles,
             })
             return
 

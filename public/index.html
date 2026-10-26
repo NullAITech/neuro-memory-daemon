@@ -1862,8 +1862,17 @@
             <input type="checkbox" id="auto-rotate-check" checked onchange="toggleAutoRotate(this.checked)"> Auto-Orbit
           </label>
           <button class="btn-icon" id="btn-audio-toggle" style="width:26px; height:26px; font-size:12px;" onclick="toggleNebulaAudio()" title="Toggle Action Potential Audio">✦</button>
+          
+          <!-- Salience Filter Scrubber -->
+          <div class="salience-slider-container" style="display:flex; align-items:center; gap:6px; background:rgba(8,10,18,0.75); border:1px solid rgba(0,229,255,0.3); border-radius:18px; padding:2px 8px; font-size:11px;">
+            <span style="color:#A855F7; font-weight:700; font-size:10px; white-space:nowrap;">Salience Filter:</span>
+            <input type="range" id="salience-slider" min="0" max="0.95" step="0.05" value="0" style="width:65px; height:4px; accent-color:#00E5FF; cursor:pointer;" oninput="updateSalienceThreshold(this.value)">
+            <span id="salience-val-display" style="font-family:monospace; color:#00E5FF; font-weight:700; font-size:10px; min-width:24px;">0.00</span>
+          </div>
+
           <button class="btn btn-primary" id="btn-forge-engram" style="padding:4px 10px; font-size:11px; background:linear-gradient(135deg, #F3D56A, #B8860B); color:#08080B; font-weight:800; border:none; box-shadow:0 0 10px rgba(243,213,106,0.4);" onclick="forge3DEngramQuick()" title="Launch real-time 3D engram birth projectile into Netrunner Cyber-Cortex">✦ Forge 3D Engram</button>
           <button class="btn btn-outlined" id="btn-galaxy-tour" style="padding:4px 10px; font-size:11px; border-color:#00E5FF; color:#00E5FF; font-weight:600;" onclick="toggleNebulaGalaxyTour()" title="Start Cinematic 3D Tour across all 6 Galaxies & Netrunner Core">✦ 3D Galaxy Tour</button>
+          <button class="btn btn-outlined" id="btn-dream-replay" style="padding:4px 10px; font-size:11px; border-color:#A855F7; color:#C084FC; font-weight:700; background:rgba(168,85,247,0.15); box-shadow:0 0 10px rgba(168,85,247,0.35); transition:all 0.2s;" onclick="triggerDreamWave()" title="Launch 3D Hippocampal Dream Replay Wave & Cross-Galaxy SWR Consolidation">🌙 3D Dream Replay</button>
           <button class="btn btn-primary" style="padding:4px 10px; font-size:11px; background:linear-gradient(135deg, #F3D56A, #B8860B); color:#08080B; font-weight:700;" onclick="triggerVisualSleepReplay()" title="Run Hippocampal Sleep Replay (SWRs)">✦ Sleep Replay</button>
           <button class="btn btn-outlined" style="padding:4px 10px; font-size:11px;" onclick="resetNebulaView()">Center 3D</button>
           <button class="btn btn-tonal" style="padding:4px 10px; font-size:11px;" onclick="fetchGraphData()">Sync</button>
@@ -3894,6 +3903,28 @@ curl -X POST http://127.0.0.1:8788/api/recall \
       switchTab('graph');
       window.nebulaApp.completePattern(selectedEngramNode.id);
     }
+
+    // ✦ Wave 5: Hippocampal Dream Replay & Salience Threshold Helpers
+    function triggerDreamWave() {
+      switchTab('graph');
+      if (window.nebulaApp && typeof window.nebulaApp.triggerDreamWave === 'function') {
+        return window.nebulaApp.triggerDreamWave();
+      }
+      return null;
+    }
+    window.triggerDreamWave = triggerDreamWave;
+
+    function updateSalienceThreshold(val) {
+      const numVal = parseFloat(val);
+      if (window.nebulaApp && typeof window.nebulaApp.setSalienceThreshold === 'function') {
+        return window.nebulaApp.setSalienceThreshold(numVal);
+      }
+      return null;
+    }
+    window.updateSalienceThreshold = updateSalienceThreshold;
+    window.setSalienceThreshold = function(val) {
+      return updateSalienceThreshold(val);
+    };
 
     window.toggleTourMode = toggleNebulaGalaxyTour;
     window.tracePathway = function(sourceId, targetId) {
