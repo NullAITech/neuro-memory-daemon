@@ -753,6 +753,53 @@ def test_obsidian_bundle_get(obsidian_server: tuple[MemoryUIServer, str, MemoryD
     assert "dailyNote" in data
 
 
+def test_obsidian_backlinks_get(obsidian_server: tuple[MemoryUIServer, str, MemoryDaemon]):
+    """Test GET /api/obsidian/backlinks returns incoming backlinks, outlinks & unlinked mentions."""
+    _, base_url, _ = obsidian_server
+
+    # 1. Inspect 00 Home
+    status, _, body = _http_get(f"{base_url}/api/obsidian/backlinks?note=00%20Home")
+    assert status == 200
+    data = json.loads(body.decode("utf-8"))
+    assert data["ok"] is True
+    assert data["note"]["title"] == "00 Home"
+    assert "00 Home.md" in data["note"]["relPath"]
+    assert data["note"]["cluster"] == "Root"
+    assert data["note"]["wordCount"] > 100
+    assert data["outgoingCount"] >= 50
+    assert len(data["outgoingLinks"]) >= 50
+    assert data["backlinksCount"] >= 40
+    assert len(data["incomingBacklinks"]) >= 40
+    assert "unlinkedCount" in data
+
+    # 2. Inspect Zoth OS (high centrality hub with unlinked mentions)
+    status, _, body = _http_get(f"{base_url}/api/obsidian/backlinks?note=Zoth%20OS")
+    assert status == 200
+    os_data = json.loads(body.decode("utf-8"))
+    assert os_data["ok"] is True
+    assert os_data["note"]["title"] == "Zoth OS"
+    assert os_data["backlinksCount"] >= 1000
+    assert os_data["unlinkedCount"] >= 5
+    assert len(os_data["unlinkedMentions"]) >= 5
+    first_unlinked = os_data["unlinkedMentions"][0]
+    assert "sourceTitle" in first_unlinked
+    assert "snippet" in first_unlinked
+
+    # 3. Default without note param defaults to 00 Home
+    status, _, body = _http_get(f"{base_url}/api/obsidian/backlinks")
+    assert status == 200
+    def_data = json.loads(body.decode("utf-8"))
+    assert def_data["ok"] is True
+    assert def_data["note"]["title"] == "00 Home"
+
+    # 4. Non-existent note returns ok: false with error
+    status, _, body = _http_get(f"{base_url}/api/obsidian/backlinks?note=TotallyNonExistentNote12345")
+    assert status == 200
+    err_data = json.loads(body.decode("utf-8"))
+    assert err_data["ok"] is False
+    assert "not found" in err_data["error"]
+
+
 
 
 

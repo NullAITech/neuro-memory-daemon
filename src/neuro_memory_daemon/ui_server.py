@@ -619,6 +619,164 @@ health_score: 100
             "memoryId": memory_id
         }
 
+    def _query_obsidian_backlinks(self, vault_dir: Path, note_query: str) -> Dict[str, Any]:
+        """Scan Obsidian Vault for outgoing wikilinks, incoming backlinks, and unlinked mentions."""
+        q = (note_query or "").strip()
+        if not q:
+            q = "00 Home"
+
+        if not vault_dir.exists():
+            return {
+                "ok": False,
+                "error": "Vault directory not found",
+                "note": None,
+                "outgoingCount": 0,
+                "outgoingLinks": [],
+                "backlinksCount": 0,
+                "incomingBacklinks": [],
+                "unlinkedCount": 0,
+                "unlinkedMentions": []
+            }
+
+        # 1. Resolve target note file
+        all_md_files = [p for p in vault_dir.rglob("*.md") if not p.name.startswith(".")]
+        target_file = None
+        q_lower = q.lower()
+        if q_lower.endswith(".md"):
+            q_lower_stem = q_lower[:-3]
+        else:
+            q_lower_stem = q_lower
+
+        # Exact stem or relative path match
+        for p in all_md_files:
+            rel = str(p.relative_to(vault_dir)).lower()
+            if p.stem.lower() == q_lower_stem or rel in (q_lower, f"{q_lower_stem}.md"):
+                target_file = p
+                break
+
+        # Fallback substring match
+        if not target_file:
+            for p in all_md_files:
+                if q_lower_stem in p.stem.lower():
+                    target_file = p
+                    break
+
+        if not target_file:
+            return {
+                "ok": False,
+                "error": f"Note '{q}' not found in vault",
+                "note": None,
+                "outgoingCount": 0,
+                "outgoingLinks": [],
+                "backlinksCount": 0,
+                "incomingBacklinks": [],
+                "unlinkedCount": 0,
+                "unlinkedMentions": []
+            }
+
+        def _resolve_cluster(p_path: Path) -> str:
+            parts = p_path.relative_to(vault_dir).parts
+            if len(parts) > 1:
+                c = parts[0]
+                if c == "06-Wiki": return "Wiki"
+                if c == "05-Telemetry": return "Telemetry"
+                if c == "04-Ingested": return "Ingested"
+                if c == "07-Daily": return "Daily"
+                return c
+            return "Root"
+
+        note_title = target_file.stem
+        note_rel = str(target_file.relative_to(vault_dir))
+        note_cluster = _resolve_cluster(target_file)
+        note_txt = safe_read_text(target_file)
+        word_count = len(note_txt.split())
+
+        # Map of all vault stems for fast existence lookup
+        stem_map = {}
+        for p in all_md_files:
+            stem_map[p.stem.lower()] = p
+
+        # 2. Outgoing wikilinks
+        raw_outgoing = re.findall(r"\[\[([^\]|#]+)", note_txt)
+        dedup_outgoing = list(dict.fromkeys(t.strip() for t in raw_outgoing if t.strip()))
+        outgoing_links = []
+        for t in dedup_outgoing:
+            t_clean = t.strip()
+            target_p = stem_map.get(t_clean.lower())
+            if not target_p and "/" in t_clean:
+                target_p = stem_map.get(Path(t_clean).stem.lower())
+
+            exists = target_p is not None
+            out_rel = str(target_p.relative_to(vault_dir)) if target_p else None
+            out_cluster = _resolve_cluster(target_p) if target_p else "Unresolved"
+            outgoing_links.append({
+                "target": t_clean,
+                "exists": exists,
+                "relPath": out_rel,
+                "cluster": out_cluster
+            })
+
+        # 3. Incoming Backlinks & Unlinked Mentions
+        esc_stem = re.escape(note_title)
+        esc_rel = re.escape(note_rel[:-3] if note_rel.endswith(".md") else note_rel)
+        link_pat = re.compile(r'\[\[(?:' + esc_stem + r'|' + esc_rel + r')(?:#[^\]|]+)?(?:\|[^\]]+)?\]\]', re.IGNORECASE)
+
+        incoming_backlinks = []
+        unlinked_mentions = []
+
+        for p in all_md_files:
+            if p == target_file:
+                continue
+            try:
+                content = safe_read_text(p)
+            except Exception:
+                continue
+
+            src_title = p.stem
+            src_rel = str(p.relative_to(vault_dir))
+            src_cluster = _resolve_cluster(p)
+
+            m = link_pat.search(content)
+            if m:
+                start = max(0, m.start() - 60)
+                end = min(len(content), m.end() + 80)
+                snip = content[start:end].replace("\n", " ").strip()
+                incoming_backlinks.append({
+                    "sourceTitle": src_title,
+                    "sourcePath": src_rel,
+                    "cluster": src_cluster,
+                    "contextSnippet": snip
+                })
+            else:
+                if len(note_title) >= 4:
+                    no_links = re.sub(r'\[\[.*?\]\]', '', content)
+                    idx = no_links.lower().find(note_title.lower())
+                    if idx != -1:
+                        start = max(0, idx - 50)
+                        end = min(len(no_links), idx + len(note_title) + 70)
+                        snip = no_links[start:end].replace("\n", " ").strip()
+                        unlinked_mentions.append({
+                            "sourceTitle": src_title,
+                            "sourcePath": src_rel,
+                            "snippet": snip
+                        })
+
+        return {
+            "ok": True,
+            "note": {
+                "title": note_title,
+                "relPath": note_rel,
+                "cluster": note_cluster,
+                "wordCount": word_count
+            },
+            "outgoingCount": len(outgoing_links),
+            "outgoingLinks": outgoing_links,
+            "backlinksCount": len(incoming_backlinks),
+            "incomingBacklinks": incoming_backlinks,
+            "unlinkedCount": len(unlinked_mentions),
+            "unlinkedMentions": unlinked_mentions[:60]
+        }
+
     def do_OPTIONS(self) -> None:
         """Handle CORS preflight requests."""
         self.send_response(204)
@@ -1130,6 +1288,14 @@ health_score: 100
                     self._send_json({"ok": False, "error": str(ex)}, status=500)
                     return
             self._send_json({"ok": False, "error": "Bundle not available"}, status=404)
+            return
+
+        # Obsidian Backlinks, Outlinks & Unlinked Mentions Endpoint (GET)
+        elif path in ("/api/obsidian/backlinks", "/v1/obsidian/backlinks"):
+            vault_dir = Path.home() / "Documents" / "Obsidian Vault"
+            note_param = params.get("note", params.get("title", params.get("q", [""])))[0]
+            result = self._query_obsidian_backlinks(vault_dir, note_param)
+            self._send_json(result)
             return
 
         # Obsidian Unified Second Brain Search Endpoint (GET)

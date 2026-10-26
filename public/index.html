@@ -2884,6 +2884,87 @@ curl -X POST http://127.0.0.1:8788/api/recall \
           </div>
         </div>
 
+        <!-- Obsidian Backlinks, Outlinks & Unlinked Mentions Inspector (#obsidian-backlinks-inspector) -->
+        <div class="wiki-panel" id="obsidian-backlinks-inspector" style="margin-top:16px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:20px;">🔗</span>
+              <div>
+                <div style="font-size:15px; font-weight:700; color:#00E5FF;">Backlinks, Outlinks &amp; Unlinked Mentions Inspector</div>
+                <div style="font-size:11.5px; color:var(--md-on-surface-variant);">Bidirectional knowledge graph citation analysis across all 1,729+ vault notes.</div>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;" id="backlinks-header-badges">
+              <span class="wiki-tag-pill" style="color:#00E5FF; border-color:rgba(0,229,255,0.3); font-size:11px;" id="backlinks-inspected-title">00 Home</span>
+              <span class="wiki-tag-pill" style="color:#A855F7; border-color:rgba(168,85,247,0.3); font-size:11px;" id="backlinks-inspected-cluster">Cluster: Root</span>
+              <span class="wiki-tag-pill" style="color:#10B981; border-color:rgba(16,185,129,0.3); font-size:11px;" id="backlinks-inspected-words">0 Words</span>
+            </div>
+          </div>
+
+          <!-- Note Input & Quick Action Bar -->
+          <div style="display:flex; gap:8px; align-items:center; background:rgba(8,8,12,0.85); border:1px solid rgba(0,229,255,0.3); border-radius:8px; padding:8px 12px; margin-bottom:10px;">
+            <input type="text" class="wiki-input" id="backlinks-note-input" value="00 Home" placeholder="Note title or relative path (e.g. '00 Home', 'Zoth OS', 'Vaelor Network')..." onkeydown="if(event.key==='Enter') inspectObsidianBacklinks()" style="flex:1;">
+            <button class="btn btn-primary" id="btn-inspect-backlinks" style="background:linear-gradient(135deg, #00E5FF, #0284C7); color:#08080B; font-weight:700; border:none; padding:7px 16px; font-size:11.5px; border-radius:6px; white-space:nowrap; cursor:pointer; display:inline-flex; align-items:center; gap:6px;" onclick="inspectObsidianBacklinks()">
+              <span>🔗</span> Inspect Links
+            </button>
+          </div>
+
+          <!-- Quick Hub Pills -->
+          <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:14px;">
+            <span style="font-size:11px; color:var(--md-on-surface-variant); font-weight:600;">Quick Hubs:</span>
+            <button class="wiki-tag-pill" style="cursor:pointer; background:rgba(0,229,255,0.08); border-color:rgba(0,229,255,0.4); color:#00E5FF; font-size:11px;" onclick="selectBacklinkHub('00 Home')">00 Home</button>
+            <button class="wiki-tag-pill" style="cursor:pointer; background:rgba(168,85,247,0.08); border-color:rgba(168,85,247,0.4); color:#D8B4FE; font-size:11px;" onclick="selectBacklinkHub('Zoth OS')">Zoth OS</button>
+            <button class="wiki-tag-pill" style="cursor:pointer; background:rgba(232,121,249,0.08); border-color:rgba(232,121,249,0.4); color:#F472B6; font-size:11px;" onclick="selectBacklinkHub('Zoth Studio')">Zoth Studio</button>
+            <button class="wiki-tag-pill" style="cursor:pointer; background:rgba(16,185,129,0.08); border-color:rgba(16,185,129,0.4); color:#6EE7B7; font-size:11px;" onclick="selectBacklinkHub('Zoth Trust & Supply Chain')">Zoth Trust &amp; Supply Chain</button>
+            <button class="wiki-tag-pill" style="cursor:pointer; background:rgba(245,158,11,0.08); border-color:rgba(245,158,11,0.4); color:#FCD34D; font-size:11px;" onclick="selectBacklinkHub('MOC Skills')">MOC Skills</button>
+            <button class="wiki-tag-pill" style="cursor:pointer; background:rgba(96,165,250,0.08); border-color:rgba(96,165,250,0.4); color:#93C5FD; font-size:11px;" onclick="selectBacklinkHub('Vaelor Account-Lattice & PoUW Protocol')">Vaelor Account-Lattice &amp; PoUW Protocol</button>
+          </div>
+
+          <!-- Three-Column Breakdown Grid -->
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap:14px;">
+            
+            <!-- Col 1: Incoming Backlinks -->
+            <div style="background:#0D0D14; border:1px solid #232332; border-radius:8px; padding:12px; display:flex; flex-direction:column;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; border-bottom:1px solid #1F1F2E; padding-bottom:6px;">
+                <div style="font-size:12.5px; font-weight:700; color:#A855F7; display:flex; align-items:center; gap:6px;">
+                  <span>⬅️</span> Incoming Backlinks
+                </div>
+                <span class="wiki-tag-pill" style="color:#A855F7; border-color:rgba(168,85,247,0.3); font-size:10.5px;" id="backlinks-incoming-count">0 Citations</span>
+              </div>
+              <div id="backlinks-incoming-list" style="overflow-y:auto; max-height:360px; min-height:140px; display:flex; flex-direction:column; gap:8px;">
+                <div style="color:var(--md-on-surface-variant); font-size:11.5px; font-style:italic; padding:10px;">Select a note above to view incoming citations.</div>
+              </div>
+            </div>
+
+            <!-- Col 2: Outgoing Wikilinks -->
+            <div style="background:#0D0D14; border:1px solid #232332; border-radius:8px; padding:12px; display:flex; flex-direction:column;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; border-bottom:1px solid #1F1F2E; padding-bottom:6px;">
+                <div style="font-size:12.5px; font-weight:700; color:#00E5FF; display:flex; align-items:center; gap:6px;">
+                  <span>➡️</span> Outgoing Wikilinks
+                </div>
+                <span class="wiki-tag-pill" style="color:#00E5FF; border-color:rgba(0,229,255,0.3); font-size:10.5px;" id="backlinks-outgoing-count">0 Targets</span>
+              </div>
+              <div id="backlinks-outgoing-list" style="overflow-y:auto; max-height:360px; min-height:140px; display:flex; flex-direction:column; gap:8px;">
+                <div style="color:var(--md-on-surface-variant); font-size:11.5px; font-style:italic; padding:10px;">Select a note above to view outgoing wikilinks.</div>
+              </div>
+            </div>
+
+            <!-- Col 3: Unlinked Mentions -->
+            <div style="background:#0D0D14; border:1px solid #232332; border-radius:8px; padding:12px; display:flex; flex-direction:column;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; border-bottom:1px solid #1F1F2E; padding-bottom:6px;">
+                <div style="font-size:12.5px; font-weight:700; color:#F59E0B; display:flex; align-items:center; gap:6px;">
+                  <span>💡</span> Unlinked Mentions
+                </div>
+                <span class="wiki-tag-pill" style="color:#F59E0B; border-color:rgba(245,158,11,0.3); font-size:10.5px;" id="backlinks-unlinked-count">0 Mentions</span>
+              </div>
+              <div id="backlinks-unlinked-list" style="overflow-y:auto; max-height:360px; min-height:140px; display:flex; flex-direction:column; gap:8px;">
+                <div style="color:var(--md-on-surface-variant); font-size:11.5px; font-style:italic; padding:10px;">Select a note above to view unlinked mentions.</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
         <!-- 7 Official Obsidian Agent Skills Grid -->
         <div style="margin-top:16px;">
           <div style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:0.6px; color:#D4AF37; margin-bottom:10px;">
@@ -4725,7 +4806,8 @@ curl -X POST http://127.0.0.1:8788/api/recall \
         fetchObsidianGraph(),
         fetchObsidianVaultFiles(),
         fetchMcpTools(),
-        fetchObsidianDaily()
+        fetchObsidianDaily(),
+        inspectObsidianBacklinks('00 Home')
       ]);
     }
 
@@ -5865,6 +5947,121 @@ curl -X POST http://127.0.0.1:8788/api/recall \
         });
       } else {
         prompt('Copy Daily Note:', window.activeDailyNote.content);
+      }
+    }
+
+    // ---------------------------------------------------------
+    // Backlinks, Outlinks & Unlinked Mentions Inspector
+    // ---------------------------------------------------------
+    async function selectBacklinkHub(title) {
+      const input = document.getElementById('backlinks-note-input');
+      if (input) input.value = title;
+      return await inspectObsidianBacklinks(title);
+    }
+
+    async function inspectObsidianBacklinks(targetQuery) {
+      const input = document.getElementById('backlinks-note-input');
+      const query = (targetQuery || (input ? input.value : '') || '00 Home').trim();
+      const btn = document.getElementById('btn-inspect-backlinks');
+
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span>⏳</span> Scanning Vault...';
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/api/obsidian/backlinks?note=${encodeURIComponent(query)}`);
+        const data = await res.json();
+
+        if (res.ok && data.ok) {
+          const note = data.note || {};
+          const titleEl = document.getElementById('backlinks-inspected-title');
+          const clusterEl = document.getElementById('backlinks-inspected-cluster');
+          const wordsEl = document.getElementById('backlinks-inspected-words');
+
+          if (titleEl) titleEl.textContent = note.title || query;
+          if (clusterEl) clusterEl.textContent = `Cluster: ${note.cluster || 'Root'}`;
+          if (wordsEl) wordsEl.textContent = `${(note.wordCount || 0).toLocaleString()} Words`;
+
+          // 1. Incoming Backlinks
+          const inCountEl = document.getElementById('backlinks-incoming-count');
+          const inListEl = document.getElementById('backlinks-incoming-list');
+          if (inCountEl) inCountEl.textContent = `${data.backlinksCount || 0} Citations`;
+
+          if (inListEl) {
+            if (!data.incomingBacklinks || data.incomingBacklinks.length === 0) {
+              inListEl.innerHTML = `<div style="color:var(--md-on-surface-variant); font-size:11.5px; font-style:italic; padding:8px;">No incoming backlinks found for [[${escapeHtml(query)}]].</div>`;
+            } else {
+              inListEl.innerHTML = data.incomingBacklinks.map(b => `
+                <div style="background:#13131F; border:1px solid #28283C; border-radius:6px; padding:8px 10px;">
+                  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+                    <a href="javascript:void(0)" onclick="selectBacklinkHub('${escapeHtml(b.sourceTitle)}')" style="font-size:11.5px; font-weight:700; color:#A855F7; text-decoration:none;">[[${escapeHtml(b.sourceTitle)}]]</a>
+                    <span style="font-size:9.5px; color:#94A3B8; background:rgba(148,163,184,0.1); padding:1px 5px; border-radius:4px;">${escapeHtml(b.cluster || 'Vault')}</span>
+                  </div>
+                  <div style="font-size:11px; color:#CBD5E1; line-height:1.4; font-family:var(--font-mono); background:#0A0A10; padding:4px 6px; border-radius:4px;">${escapeHtml(b.contextSnippet)}</div>
+                </div>
+              `).join('');
+            }
+          }
+
+          // 2. Outgoing Wikilinks
+          const outCountEl = document.getElementById('backlinks-outgoing-count');
+          const outListEl = document.getElementById('backlinks-outgoing-list');
+          if (outCountEl) outCountEl.textContent = `${data.outgoingCount || 0} Targets`;
+
+          if (outListEl) {
+            if (!data.outgoingLinks || data.outgoingLinks.length === 0) {
+              outListEl.innerHTML = `<div style="color:var(--md-on-surface-variant); font-size:11.5px; font-style:italic; padding:8px;">No outgoing wikilinks in this note.</div>`;
+            } else {
+              outListEl.innerHTML = data.outgoingLinks.map(o => `
+                <div style="background:#13131F; border:1px solid #28283C; border-radius:6px; padding:8px 10px; display:flex; align-items:center; justify-content:space-between;">
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    <span style="font-size:12px;">${o.exists ? '📄' : '⚪'}</span>
+                    <a href="javascript:void(0)" onclick="selectBacklinkHub('${escapeHtml(o.target)}')" style="font-size:11.5px; font-weight:600; color:#00E5FF; text-decoration:none;">[[${escapeHtml(o.target)}]]</a>
+                  </div>
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    <span style="font-size:9.5px; padding:1px 5px; border-radius:4px; ${o.exists ? 'color:#10B981; background:rgba(16,185,129,0.1);' : 'color:#EF4444; background:rgba(239,68,68,0.1);'}">
+                      ${o.exists ? '🟢 Resolved' : '🔴 Unresolved'}
+                    </span>
+                    <span style="font-size:9.5px; color:#94A3B8; background:rgba(148,163,184,0.1); padding:1px 5px; border-radius:4px;">${escapeHtml(o.cluster || 'Vault')}</span>
+                  </div>
+                </div>
+              `).join('');
+            }
+          }
+
+          // 3. Unlinked Mentions
+          const unCountEl = document.getElementById('backlinks-unlinked-count');
+          const unListEl = document.getElementById('backlinks-unlinked-list');
+          if (unCountEl) unCountEl.textContent = `${data.unlinkedCount || 0} Mentions`;
+
+          if (unListEl) {
+            if (!data.unlinkedMentions || data.unlinkedMentions.length === 0) {
+              unListEl.innerHTML = `<div style="color:var(--md-on-surface-variant); font-size:11.5px; font-style:italic; padding:8px;">No unlinked plaintext mentions found.</div>`;
+            } else {
+              unListEl.innerHTML = data.unlinkedMentions.map(u => `
+                <div style="background:#13131F; border:1px solid #28283C; border-radius:6px; padding:8px 10px;">
+                  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+                    <a href="javascript:void(0)" onclick="selectBacklinkHub('${escapeHtml(u.sourceTitle)}')" style="font-size:11.5px; font-weight:700; color:#F59E0B; text-decoration:none;">[[${escapeHtml(u.sourceTitle)}]]</a>
+                    <span style="font-size:9.5px; color:#94A3B8; background:rgba(148,163,184,0.1); padding:1px 5px; border-radius:4px;">Mention</span>
+                  </div>
+                  <div style="font-size:11px; color:#CBD5E1; line-height:1.4; font-family:var(--font-mono); background:#0A0A10; padding:4px 6px; border-radius:4px;">${escapeHtml(u.snippet)}</div>
+                </div>
+              `).join('');
+            }
+          }
+
+          showToast(`🔗 Inspected links for [[${note.title || query}]]: ${data.backlinksCount || 0} backlinks, ${data.outgoingCount || 0} outlinks.`, 'info');
+        } else {
+          showToast(`Could not inspect note: ${data.error || 'Unknown error'}`, 'error');
+        }
+      } catch (err) {
+        showToast(`Backlinks inspection network error: ${err.message}`, 'error');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<span>🔗</span> Inspect Links';
+        }
       }
     }
 
