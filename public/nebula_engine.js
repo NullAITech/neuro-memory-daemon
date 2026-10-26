@@ -901,6 +901,24 @@
         this.nodeMeshes.set(String(node.id), mesh);
       });
 
+      // 1b. Ensure each of the 6 galaxies has at least one anchor star represented
+      Object.keys(GALAXY_CLUSTERS).forEach((galaxyKey) => {
+        const galaxy = GALAXY_CLUSTERS[galaxyKey];
+        const hasNodes = Array.from(this.nodeMeshes.values()).some(m => m.userData && m.userData.galaxy && m.userData.galaxy.id === galaxy.id);
+        if (!hasNodes) {
+          const anchorData = {
+            id: `anchor-${galaxy.id}`,
+            label: `${galaxy.name} Core Star`,
+            text: `${galaxy.name}: ${galaxy.description}. Sovereign STDP cluster.`,
+            category: galaxy.id,
+            tags: [galaxy.id, 'sovereign', 'nebula', 'stdp'],
+            importance: 1.4,
+            access_count: 5,
+          };
+          this.anchorNewEngramNode(anchorData, galaxy, galaxy.center.clone());
+        }
+      });
+
       // 2. Build Curved Bezier Synaptic Filaments
       const seenPairs = new Set();
       const filamentMatWeak = new THREE.LineBasicMaterial({
@@ -2919,6 +2937,306 @@
 
       // 7. Render
       this.renderer.render(this.scene, this.camera);
+    }
+
+    /**
+     * Searches 3D stars across all 6 Galaxies for query, smoothly glides camera,
+     * fires arrival shockwave, traces synaptic pathway beam from (0,0,0) to star,
+     * and updates #nebula-tour-banner with 🎯 3D STAR LOCKED: [GALAXY] <snippet>.
+     */
+    focusNodeByQuery(query) {
+      const q = String(query || '').trim().toLowerCase();
+      if (!q) {
+        if (typeof showToast === 'function') showToast('Please enter a query or star name to locate', 'info');
+        return null;
+      }
+
+      let bestMesh = null;
+      let highestScore = -1;
+
+      // Scan all node meshes across 6 galaxies in the 3D nebula
+      for (const [id, mesh] of this.nodeMeshes.entries()) {
+        const nodeData = mesh.userData.nodeData || {};
+        const galaxy = mesh.userData.galaxy || this.determineGalaxy(nodeData);
+
+        const text = String(nodeData.text || nodeData.label || '').toLowerCase();
+        const cat = String(nodeData.category || '').toLowerCase();
+        const tags = Array.isArray(nodeData.tags) ? nodeData.tags.map(t => String(t).toLowerCase()) : [];
+        const gName = String(galaxy.name || '').toLowerCase();
+        const gId = String(galaxy.id || '').toLowerCase();
+
+        let score = 0;
+        if (text === q || String(id) === q) score += 100;
+        else if (text.startsWith(q)) score += 50;
+        else if (text.includes(q)) score += 30;
+
+        if (gId === q || gName === q) score += 40;
+        else if (gName.includes(q) || gId.includes(q)) score += 20;
+
+        if (cat === q) score += 35;
+        else if (cat.includes(q)) score += 15;
+
+        if (tags.includes(q)) score += 30;
+        else if (tags.some(t => t.includes(q))) score += 15;
+
+        if (score > highestScore) {
+          highestScore = score;
+          bestMesh = mesh;
+        }
+      }
+
+      // If no individual engram matched, check if query matches a galaxy name directly
+      if (!bestMesh || highestScore <= 0) {
+        const matchedGalaxyKey = Object.keys(GALAXY_CLUSTERS).find(k => {
+          const g = GALAXY_CLUSTERS[k];
+          return g.id.toLowerCase().includes(q) || g.name.toLowerCase().includes(q) || q.includes(g.id.toLowerCase()) || (q.includes('obsidian') && k === 'obsidian');
+        });
+
+        if (matchedGalaxyKey) {
+          const targetGalaxy = GALAXY_CLUSTERS[matchedGalaxyKey];
+          const galaxyNodes = Array.from(this.nodeMeshes.values()).filter(m => {
+            const g = m.userData.galaxy || this.determineGalaxy(m.userData.nodeData || {});
+            return g.id === matchedGalaxyKey;
+          });
+          if (galaxyNodes.length > 0) {
+            bestMesh = galaxyNodes[0];
+          } else {
+            const starData = {
+              id: 'anchor-' + matchedGalaxyKey,
+              label: `${targetGalaxy.name} Core Star`,
+              text: `${targetGalaxy.name}: ${targetGalaxy.description}. Sovereign STDP cluster.`,
+              category: matchedGalaxyKey,
+              tags: [matchedGalaxyKey, 'sovereign', 'nebula', 'stdp'],
+              importance: 1.5,
+              access_count: 5,
+            };
+            bestMesh = this.anchorNewEngramNode(starData, targetGalaxy, targetGalaxy.center.clone());
+          }
+        }
+      }
+
+      if (!bestMesh) {
+        if (typeof showToast === 'function') {
+          showToast(`No 3D star found matching "${query}"`, 'warning');
+        }
+        return null;
+      }
+
+      const matchedNodeData = bestMesh.userData.nodeData || {};
+      const galaxy = bestMesh.userData.galaxy || this.determineGalaxy(matchedNodeData);
+      const starPos = bestMesh.position.clone();
+      const corePos = new THREE.Vector3(0, 0, 0);
+
+      // 1. Select and flash spotlight on matched star
+      this.selectedNode = bestMesh;
+      this.flashNode(bestMesh, 0x00E5FF, 2.8);
+
+      // 2. Smoothly glide Three.js camera to focus on matched star
+      const camTarget = new THREE.Vector3(
+        starPos.x + 35,
+        starPos.y + 20,
+        starPos.z + 65
+      );
+      this.glideCameraTo(camTarget, starPos, 1.3);
+
+      // 3. Fire arrival shockwave at star position
+      this.fireShockwave(starPos, galaxy.color || 0x00E5FF, 2.6);
+      if (this.audio) this.audio.playActionPotential(750);
+
+      // 4. Trace a synaptic pathway beam from (0,0,0) Netrunner Core to that star
+      const midControl = new THREE.Vector3(
+        (corePos.x + starPos.x) * 0.5,
+        (corePos.y + starPos.y) * 0.5 + 30,
+        (corePos.z + starPos.z) * 0.5
+      );
+      const beamCurve = new THREE.QuadraticBezierCurve3(corePos, midControl, starPos);
+
+      // Add luminous synaptic beam line to 3D scene
+      const beamPoints = beamCurve.getPoints(48);
+      const beamGeo = new THREE.BufferGeometry().setFromPoints(beamPoints);
+      const beamMat = new THREE.LineBasicMaterial({
+        color: galaxy.color || 0x00E5FF,
+        transparent: true,
+        opacity: 0.95,
+        linewidth: 2,
+      });
+      const beamLine = new THREE.Line(beamGeo, beamMat);
+      this.scene.add(beamLine);
+
+      // Launch traveling plasma burst along the beam
+      this.spawnPlasmaPulse(beamCurve, 1.2, 0x00E5FF, 3.5);
+      setTimeout(() => {
+        this.spawnPathwayBurst(beamCurve, 0xFFD700, 2.5);
+      }, 120);
+
+      // Smoothly fade out the temporary synaptic beam
+      setTimeout(() => {
+        let op = 0.95;
+        const fadeTimer = setInterval(() => {
+          op -= 0.1;
+          if (op <= 0) {
+            clearInterval(fadeTimer);
+            this.scene.remove(beamLine);
+            beamGeo.dispose();
+            beamMat.dispose();
+          } else {
+            beamMat.opacity = op;
+          }
+        }, 60);
+      }, 2500);
+
+      // 5. Update #nebula-tour-banner with 🎯 3D STAR LOCKED: [GALAXY] <snippet>
+      const banner = document.getElementById('nebula-tour-banner');
+      if (banner) {
+        const rawText = matchedNodeData.text || matchedNodeData.label || ('Engram #' + (matchedNodeData.id || ''));
+        const snippet = rawText.length > 80 ? rawText.slice(0, 77) + '...' : rawText;
+        const galaxyName = (galaxy.name || galaxy.id || 'COSMOS').toUpperCase();
+
+        banner.innerHTML = `
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:6px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:18px;">🎯</span>
+              <span style="font-weight:700; font-size:12px; color:${galaxy.hex || '#00E5FF'}; text-transform:uppercase; letter-spacing:0.8px;">
+                3D STAR LOCKED: [${galaxyName}]
+              </span>
+            </div>
+            <button style="background:transparent; border:none; color:#9AA0A6; cursor:pointer; font-size:16px; line-height:1; padding:0 4px;" onclick="window.nebulaApp && window.nebulaApp.hideTourNarration()">&times;</button>
+          </div>
+          <div style="font-size:12px; color:#EDEFF2; line-height:1.4; font-weight:400; padding-top:4px;">
+            ${typeof escapeHtml === 'function' ? escapeHtml(snippet) : snippet}
+          </div>
+          <div style="display:flex; align-items:center; justify-content:space-between; font-size:10px; color:#9AA0A6; font-family:var(--font-mono); padding-top:4px;">
+            <span style="color:#00E5FF;">Coord: [${Math.round(starPos.x)}, ${Math.round(starPos.y)}, ${Math.round(starPos.z)}]</span>
+            <span style="color:#D4AF37;">Synaptic Beam: Online (0,0,0 &rarr; Star)</span>
+          </div>
+        `;
+        banner.classList.add('visible');
+      }
+
+      if (typeof showToast === 'function') {
+        showToast(`🎯 3D Star Locked: [${galaxy.name}]`, 'success');
+      }
+
+      return bestMesh;
+    }
+
+    /**
+     * Serializes the live 3D Nebula topology (all 6 Galaxies, Netrunner Cyber-Cortex (0,0,0),
+     * star 3D coordinates [x,y,z], active neuromodulator mode, salience threshold, and filament count).
+     * Triggers a JSON download (neuro_nebula_3d_substrate.json) or returns the snapshot object,
+     * and shows a HUD confirmation banner (📥 3D COSMOS SNAPSHOT EXPORTED).
+     */
+    export3DSubstrateSnapshot() {
+      const now = new Date().toISOString();
+      const stars = [];
+
+      for (const [id, mesh] of this.nodeMeshes.entries()) {
+        const nodeData = mesh.userData.nodeData || {};
+        const galaxy = mesh.userData.galaxy || this.determineGalaxy(nodeData);
+        stars.push({
+          id: String(id),
+          label: nodeData.label || nodeData.text || ('Engram ' + id),
+          category: nodeData.category || 'general',
+          tags: nodeData.tags || [],
+          importance: typeof nodeData.importance === 'number' ? nodeData.importance : 1.0,
+          access_count: nodeData.access_count || 1,
+          galaxy: {
+            id: galaxy.id,
+            name: galaxy.name,
+            hex: galaxy.hex,
+          },
+          coordinates: [
+            parseFloat(mesh.position.x.toFixed(2)),
+            parseFloat(mesh.position.y.toFixed(2)),
+            parseFloat(mesh.position.z.toFixed(2)),
+          ],
+        });
+      }
+
+      const galaxiesSummary = Object.keys(GALAXY_CLUSTERS).map(k => {
+        const g = GALAXY_CLUSTERS[k];
+        const count = stars.filter(s => s.galaxy && s.galaxy.id === g.id).length;
+        return {
+          id: g.id,
+          name: g.name,
+          hex: g.hex,
+          center: [g.center.x, g.center.y, g.center.z],
+          starCount: count,
+        };
+      });
+
+      const snapshot = {
+        title: "Neuro-Memory 3D Cosmos Substrate Topology Snapshot",
+        version: "3.3.0",
+        timestamp: now,
+        netrunnerCyberCortex: {
+          hubPosition: [0, 0, 0],
+          name: "Netrunner Cyber-Cortex",
+          frequency: this.stats.actionFrequency || 1.2,
+          plasticity: "3-Factor STDP",
+        },
+        neuromodulatorState: {
+          current: this.currentNeuromodulator || 'balanced',
+          mode: this.neuromodulatorState ? this.neuromodulatorState.name : 'Balanced',
+          colorHex: this.neuromodulatorState ? this.neuromodulatorState.colorHex : '#D4AF37',
+        },
+        salienceThreshold: typeof this.salienceThreshold === 'number' ? this.salienceThreshold : 0.0,
+        telemetry: {
+          totalStars: stars.length,
+          totalFilaments: this.filamentCurves.length,
+          activePulses: this.plasmaPulses.length,
+        },
+        galaxies: galaxiesSummary,
+        stars: stars,
+      };
+
+      // Trigger client-side JSON file download if supported
+      try {
+        if (typeof document !== 'undefined' && typeof Blob !== 'undefined' && typeof URL !== 'undefined' && URL.createObjectURL) {
+          const jsonStr = JSON.stringify(snapshot, null, 2);
+          const blob = new Blob([jsonStr], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'neuro_nebula_3d_substrate.json';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+      } catch (err) {
+        console.warn('Snapshot download skipped:', err);
+      }
+
+      // Display HUD confirmation banner (📥 3D COSMOS SNAPSHOT EXPORTED)
+      const banner = document.getElementById('nebula-tour-banner');
+      if (banner) {
+        banner.innerHTML = `
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:6px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:18px;">📥</span>
+              <span style="font-weight:700; font-size:12px; color:#00E5FF; text-transform:uppercase; letter-spacing:0.8px;">
+                3D COSMOS SNAPSHOT EXPORTED
+              </span>
+            </div>
+            <button style="background:transparent; border:none; color:#9AA0A6; cursor:pointer; font-size:16px; line-height:1; padding:0 4px;" onclick="window.nebulaApp && window.nebulaApp.hideTourNarration()">&times;</button>
+          </div>
+          <div style="font-size:12px; color:#EDEFF2; line-height:1.4; font-weight:400; padding-top:4px;">
+            Serialized <strong>${stars.length} 3D Stars</strong> across 6 Galaxies and <strong>${this.filamentCurves.length} Synaptic Filaments</strong>.
+          </div>
+          <div style="display:flex; align-items:center; justify-content:space-between; font-size:10px; color:#9AA0A6; font-family:var(--font-mono); padding-top:4px;">
+            <span style="color:#D4AF37;">File: neuro_nebula_3d_substrate.json</span>
+            <span style="color:#00E5FF;">Aura: ${this.currentNeuromodulator || 'balanced'}</span>
+          </div>
+        `;
+        banner.classList.add('visible');
+      }
+
+      if (typeof showToast === 'function') {
+        showToast('📥 3D Cosmos Substrate Snapshot Exported!', 'success');
+      }
+
+      return snapshot;
     }
   }
 

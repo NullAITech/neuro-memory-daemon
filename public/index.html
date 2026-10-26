@@ -1202,6 +1202,8 @@
       display: flex;
       align-items: center;
       gap: 10px;
+      flex-wrap: wrap;
+      max-width: calc(100% - 32px);
     }
 
     /* 3D Floating Engram Tooltip */
@@ -2123,6 +2125,14 @@
             <input type="range" id="salience-slider" min="0" max="0.95" step="0.05" value="0" style="width:65px; height:4px; accent-color:#00E5FF; cursor:pointer;" oninput="updateSalienceThreshold(this.value)">
             <span id="salience-val-display" style="font-family:monospace; color:#00E5FF; font-weight:700; font-size:10px; min-width:24px;">0.00</span>
           </div>
+
+          <!-- Compact 3D Star Search Input & Focus Button -->
+          <div class="nebula-star-search-container" style="display:flex; align-items:center; gap:4px; background:rgba(8,10,18,0.75); border:1px solid rgba(212,175,55,0.35); border-radius:18px; padding:2px 8px; font-size:11px;">
+            <input type="text" id="nebula-node-search-input" placeholder="Find 3D star / topic..." style="background:transparent; border:none; color:#EDEFF2; font-size:11px; width:115px; outline:none; padding:2px 4px;" onkeydown="if(event.key==='Enter') triggerNebulaNodeFocus()">
+            <button class="btn btn-outlined" id="btn-nebula-node-focus" style="padding:2px 8px; font-size:10px; border-color:#FFD700; color:#FFD700; border-radius:12px; font-weight:600; white-space:nowrap;" onclick="triggerNebulaNodeFocus()" title="Locate and fly camera to 3D star matching query">🎯 Locate Star</button>
+          </div>
+
+          <button class="btn btn-outlined" id="btn-export-3d-substrate" style="padding:4px 10px; font-size:11px; border-color:#00E5FF; color:#00E5FF; font-weight:600;" onclick="triggerNebulaCosmosExport()" title="Export live 3D Cosmos topology, galaxies, and star coordinates to JSON">📥 Export 3D Cosmos</button>
 
           <button class="btn btn-primary" id="btn-forge-engram" style="padding:4px 10px; font-size:11px; background:linear-gradient(135deg, #F3D56A, #B8860B); color:#08080B; font-weight:800; border:none; box-shadow:0 0 10px rgba(243,213,106,0.4);" onclick="forge3DEngramQuick()" title="Launch real-time 3D engram birth projectile into Netrunner Cyber-Cortex">✦ Forge 3D Engram</button>
           <button class="btn btn-outlined" id="btn-galaxy-tour" style="padding:4px 10px; font-size:11px; border-color:#00E5FF; color:#00E5FF; font-weight:600;" onclick="toggleNebulaGalaxyTour()" title="Start Cinematic 3D Tour across all 6 Galaxies & Netrunner Core">✦ 3D Galaxy Tour</button>
@@ -4946,6 +4956,36 @@ curl -X POST http://127.0.0.1:8788/api/recall \
       if (window.nebulaApp) {
         return window.nebulaApp.setNeuromodulatorMode(mode);
       }
+      return null;
+    };
+
+    function triggerNebulaNodeFocus() {
+      switchTab('graph');
+      const input = document.getElementById('nebula-node-search-input');
+      const query = input ? input.value.trim() : '';
+      if (!query) {
+        showToast('Please enter an engram topic or star name to locate', 'info');
+        return null;
+      }
+      if (window.nebulaApp) {
+        return window.nebulaApp.focusNodeByQuery(query);
+      }
+      return null;
+    }
+    window.focusNebulaNodeByQuery = function(query) {
+      if (window.nebulaApp) return window.nebulaApp.focusNodeByQuery(query);
+      return null;
+    };
+
+    function triggerNebulaCosmosExport() {
+      switchTab('graph');
+      if (window.nebulaApp) {
+        return window.nebulaApp.export3DSubstrateSnapshot();
+      }
+      return null;
+    }
+    window.export3DSubstrateSnapshot = function() {
+      if (window.nebulaApp) return window.nebulaApp.export3DSubstrateSnapshot();
       return null;
     };
 
