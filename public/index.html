@@ -1252,10 +1252,118 @@
       transform: translateX(-50%) translateY(0);
     }
 
+    /* Neuromodulator State Switcher Bar */
+    .nebula-neuromod-bar {
+      position: absolute;
+      top: 52px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(11, 11, 18, 0.88);
+      border: 1px solid rgba(212, 175, 55, 0.28);
+      border-radius: var(--radius-full);
+      padding: 4px 8px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      backdrop-filter: blur(14px);
+      z-index: 25;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+      max-width: 95%;
+      overflow-x: auto;
+    }
+    .neuromod-label {
+      font-size: 10px;
+      font-weight: 750;
+      color: #9AA0A6;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      padding: 0 6px;
+      white-space: nowrap;
+    }
+    .neuromod-pill {
+      padding: 4px 10px;
+      border-radius: var(--radius-full);
+      border: 1px solid transparent;
+      background: transparent;
+      color: #9AA0A6;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
+    .neuromod-pill:hover {
+      background: rgba(255, 255, 255, 0.06);
+      color: #FFFFFF;
+    }
+    .neuromod-pill.active {
+      font-weight: 750;
+    }
+    .neuromod-pill#neuromod-balanced.active {
+      color: #D4AF37;
+      border-color: rgba(212, 175, 55, 0.5);
+      background: rgba(212, 175, 55, 0.15);
+      box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+    }
+    .neuromod-pill#neuromod-dopamine.active {
+      color: #F59E0B;
+      border-color: rgba(245, 158, 11, 0.6);
+      background: rgba(245, 158, 11, 0.18);
+      box-shadow: 0 0 12px rgba(245, 158, 11, 0.35);
+    }
+    .neuromod-pill#neuromod-norepinephrine.active {
+      color: #F43F5E;
+      border-color: rgba(244, 63, 94, 0.6);
+      background: rgba(244, 63, 94, 0.18);
+      box-shadow: 0 0 12px rgba(244, 63, 94, 0.4);
+    }
+    .neuromod-pill#neuromod-acetylcholine.active {
+      color: #06B6D4;
+      border-color: rgba(6, 182, 212, 0.6);
+      background: rgba(6, 182, 212, 0.18);
+      box-shadow: 0 0 12px rgba(6, 182, 212, 0.4);
+    }
+    .neuromod-pill#neuromod-serotonin.active {
+      color: #A855F7;
+      border-color: rgba(168, 85, 247, 0.6);
+      background: rgba(168, 85, 247, 0.18);
+      box-shadow: 0 0 12px rgba(168, 85, 247, 0.35);
+    }
+
+    /* 3D Engram Birth Banner */
+    .nebula-birth-banner {
+      position: absolute;
+      top: 96px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-20px);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      background: linear-gradient(135deg, rgba(212, 175, 55, 0.28), rgba(11, 11, 18, 0.96));
+      border: 1px solid rgba(212, 175, 55, 0.7);
+      border-radius: var(--radius-lg);
+      padding: 10px 20px;
+      color: #F5E6AB;
+      backdrop-filter: blur(16px);
+      z-index: 80;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 8px 32px rgba(212, 175, 55, 0.3), 0 4px 16px rgba(0,0,0,0.85);
+      max-width: 90%;
+    }
+    .nebula-birth-banner.visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
     /* 3D Tour Narration Banner & Synaptic Pathway Banner */
     .nebula-tour-banner {
       position: absolute;
-      top: 56px;
+      top: 96px;
       left: 50%;
       transform: translateX(-50%) translateY(-15px);
       opacity: 0;
@@ -1717,6 +1825,16 @@
           <button class="galaxy-nav-btn" id="gnav-living_minds" onclick="focusNebulaGalaxy('living_minds')">◈ Living Minds Galaxy</button>
         </div>
 
+        <!-- 3D Neuromodulator Aura Switcher Bar -->
+        <div class="nebula-neuromod-bar">
+          <span class="neuromod-label">Aura:</span>
+          <button class="neuromod-pill active" id="neuromod-balanced" onclick="setNeuromodulator('balanced')" title="Balanced equilibrium (Gold/Cyan, 1.0x STDP speed)">🌌 Balanced</button>
+          <button class="neuromod-pill" id="neuromod-dopamine" onclick="setNeuromodulator('dopamine')" title="Dopamine Reward (Radiant Gold, 2.2x speed, expanded core glow)">⚡ Dopamine</button>
+          <button class="neuromod-pill" id="neuromod-norepinephrine" onclick="setNeuromodulator('norepinephrine')" title="Norepinephrine Alert (Crimson/Orange, 3.0x rapid rotation & shockwaves)">🔥 Norepinephrine</button>
+          <button class="neuromod-pill" id="neuromod-acetylcholine" onclick="setNeuromodulator('acetylcholine')" title="Acetylcholine Focus (Electric Cyan, sharpened filament opacity)">🌊 Acetylcholine</button>
+          <button class="neuromod-pill" id="neuromod-serotonin" onclick="setNeuromodulator('serotonin')" title="Serotonin Consolidation (Deep Violet, 0.6x dream-replay ripples)">💜 Serotonin</button>
+        </div>
+
         <!-- WebGL 3D Mount Container -->
         <div id="nebula-3d-container"></div>
         <canvas id="synapse-canvas" style="display:none;"></canvas>
@@ -1725,6 +1843,7 @@
         <div id="nebula-hover-tooltip" class="nebula-hover-tooltip"></div>
         <div id="nebula-sleep-banner" class="nebula-sleep-banner"></div>
         <div id="nebula-tour-banner" class="nebula-tour-banner"></div>
+        <div id="nebula-birth-banner" class="nebula-birth-banner"></div>
         <div id="nebula-pathway-banner" class="nebula-pathway-banner"></div>
 
         <!-- 3D HUD Left (Substrate Telemetry) -->
@@ -1733,6 +1852,7 @@
           <div class="hud-stat-row"><span>Active Engrams:</span> <span class="hud-stat-val" id="hud-engrams-count">--</span></div>
           <div class="hud-stat-row"><span>Synaptic Filaments:</span> <span class="hud-stat-val" id="hud-synapses-count">--</span></div>
           <div class="hud-stat-row"><span>Action Frequency:</span> <span class="hud-stat-val" id="hud-action-freq">1.2 Hz</span></div>
+          <div class="hud-stat-row"><span>Neuromodulator:</span> <span class="hud-stat-val" id="hud-neuromod-state" style="color:#D4AF37;">🌌 Balanced</span></div>
           <div class="hud-stat-row"><span>Synaptic Plasticity:</span> <span class="hud-stat-val" style="color:#00E5FF;">3-Factor STDP</span></div>
         </div>
 
@@ -1742,6 +1862,7 @@
             <input type="checkbox" id="auto-rotate-check" checked onchange="toggleAutoRotate(this.checked)"> Auto-Orbit
           </label>
           <button class="btn-icon" id="btn-audio-toggle" style="width:26px; height:26px; font-size:12px;" onclick="toggleNebulaAudio()" title="Toggle Action Potential Audio">✦</button>
+          <button class="btn btn-primary" id="btn-forge-engram" style="padding:4px 10px; font-size:11px; background:linear-gradient(135deg, #F3D56A, #B8860B); color:#08080B; font-weight:800; border:none; box-shadow:0 0 10px rgba(243,213,106,0.4);" onclick="forge3DEngramQuick()" title="Launch real-time 3D engram birth projectile into Netrunner Cyber-Cortex">✦ Forge 3D Engram</button>
           <button class="btn btn-outlined" id="btn-galaxy-tour" style="padding:4px 10px; font-size:11px; border-color:#00E5FF; color:#00E5FF; font-weight:600;" onclick="toggleNebulaGalaxyTour()" title="Start Cinematic 3D Tour across all 6 Galaxies & Netrunner Core">✦ 3D Galaxy Tour</button>
           <button class="btn btn-primary" style="padding:4px 10px; font-size:11px; background:linear-gradient(135deg, #F3D56A, #B8860B); color:#08080B; font-weight:700;" onclick="triggerVisualSleepReplay()" title="Run Hippocampal Sleep Replay (SWRs)">✦ Sleep Replay</button>
           <button class="btn btn-outlined" style="padding:4px 10px; font-size:11px;" onclick="resetNebulaView()">Center 3D</button>
@@ -2800,10 +2921,14 @@ curl -X POST http://127.0.0.1:8788/api/recall \
         });
 
         if (res.ok) {
+          const data = await res.json().catch(() => ({}));
           showToast('Memory engram encoded successfully!', 'success');
           closeIngestModal();
           document.getElementById('ingest-text').value = '';
           document.getElementById('ingest-tags').value = '';
+          if (window.nebulaApp) {
+            window.nebulaApp.spawnMemoryBurst(data.memory || payload, { focusCamera: true });
+          }
           fetchMemories();
           fetchGraphData();
           fetchStats();
@@ -2812,13 +2937,17 @@ curl -X POST http://127.0.0.1:8788/api/recall \
         }
       } catch (err) {
         showToast('Encoded into local simulated memory.', 'success');
-        appState.memories.unshift({
+        const simulated = {
           id: 'mem-' + Date.now(),
           ...payload,
           access_count: 1,
           entropy_score: 0.78,
           created_at: Date.now() / 1000
-        });
+        };
+        appState.memories.unshift(simulated);
+        if (window.nebulaApp) {
+          window.nebulaApp.spawnMemoryBurst(simulated, { focusCamera: true });
+        }
         renderMemoryStream(appState.memories);
         closeIngestModal();
       }
@@ -3715,6 +3844,44 @@ curl -X POST http://127.0.0.1:8788/api/recall \
         window.nebulaApp.toggleTourMode();
       }
     }
+
+    function setNeuromodulator(mode) {
+      switchTab('graph');
+      if (window.nebulaApp) {
+        window.nebulaApp.setNeuromodulatorMode(mode);
+      }
+      document.querySelectorAll('.neuromod-pill').forEach(btn => {
+        btn.classList.toggle('active', btn.id === 'neuromod-' + mode);
+      });
+    }
+    window.setNeuromodulatorMode = function(mode) {
+      if (window.nebulaApp) {
+        return window.nebulaApp.setNeuromodulatorMode(mode);
+      }
+      return null;
+    };
+
+    function forge3DEngramQuick() {
+      switchTab('graph');
+      const samples = [
+        { category: 'insight', agent_id: 'azoth', label: 'Causal Reflection Engram', text: 'STDP temporal credit assignment calibrated across multi-hop reasoning pathways.', tags: ['insight', 'stdp', 'causality'] },
+        { category: 'architecture', agent_id: 'sentinel', label: 'Cyber-Cortex Memory Barrier', text: 'Hardware-isolated memory engram enclave deployed with zero cloud egress guarantee.', tags: ['architecture', 'security', 'cortex'] },
+        { category: 'obsidian', agent_id: 'antigravity', label: 'Obsidian Second Brain Map', text: 'Bidirectional sync confirmed between sovereign SQLite vector stratum and Obsidian JSON canvas.', tags: ['obsidian', 'vault', 'canvas'] },
+        { category: 'tool', agent_id: 'hermes', label: 'AST Procedural Code Synthesis', text: 'High-speed AST transpiler hooked into procedural memory cache for instant code recall.', tags: ['tool', 'ast', 'compiler'] },
+        { category: 'security', agent_id: 'sentinel', label: 'Zero-Egress Audit Seal', text: 'Cryptographic hash chain validated against memory leak vector in isolated Docker jail.', tags: ['security', 'guardrail', 'crypto'] }
+      ];
+      const sample = samples[Math.floor(Math.random() * samples.length)];
+      if (window.nebulaApp) {
+        return window.nebulaApp.spawnMemoryBurst(sample, { focusCamera: true });
+      }
+      return null;
+    }
+    window.spawnMemoryBurst = function(memoryData, options) {
+      if (window.nebulaApp) {
+        return window.nebulaApp.spawnMemoryBurst(memoryData, options);
+      }
+      return null;
+    };
 
     function tracePathwayFromInspector() {
       if (!selectedEngramNode || !window.nebulaApp) return;

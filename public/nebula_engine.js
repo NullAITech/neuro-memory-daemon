@@ -78,6 +78,90 @@
       },
     };
 
+  // 5 Neuromodulatory Neurochemical States & Plasticity Presets
+  const NEUROMODULATOR_MODES = {
+    balanced: {
+      id: 'balanced',
+      name: 'Balanced',
+      label: '🌌 Balanced',
+      colorHex: '#D4AF37',
+      colorNum: 0xD4AF37,
+      secondaryHex: '#00E5FF',
+      secondaryNum: 0x00E5FF,
+      speedMultiplier: 1.0,
+      rotationMultiplier: 1.0,
+      coreEmissiveIntensity: 0.85,
+      coreScaleMultiplier: 1.0,
+      filamentOpacity: 0.35,
+      pulseFrequency: 1.2,
+      desc: 'Gold/Cyan equilibrium, normal 1.0x synaptic speed, baseline STDP plasticity.',
+    },
+    dopamine: {
+      id: 'dopamine',
+      name: 'Dopamine Reward',
+      label: '⚡ Dopamine Reward',
+      colorHex: '#f59e0b',
+      colorNum: 0xF59E0B,
+      secondaryHex: '#fbbf24',
+      secondaryNum: 0xFBBF24,
+      speedMultiplier: 2.2,
+      rotationMultiplier: 1.8,
+      coreEmissiveIntensity: 1.6,
+      coreScaleMultiplier: 1.35,
+      filamentOpacity: 0.7,
+      pulseFrequency: 4.8,
+      desc: 'Radiant Gold, 2.2x synaptic pulse speed, expanded core glow & reward plasticity surge.',
+    },
+    norepinephrine: {
+      id: 'norepinephrine',
+      name: 'Norepinephrine Alert',
+      label: '🔥 Norepinephrine Alert',
+      colorHex: '#f43f5e',
+      colorNum: 0xF43F5E,
+      secondaryHex: '#fb923c',
+      secondaryNum: 0xFB923C,
+      speedMultiplier: 2.8,
+      rotationMultiplier: 3.0,
+      coreEmissiveIntensity: 1.9,
+      coreScaleMultiplier: 1.2,
+      filamentOpacity: 0.75,
+      pulseFrequency: 6.5,
+      desc: 'Crimson/Orange, 3.0x rapid-fire cortical rotation & shockwaves, high-salience vigilance.',
+    },
+    acetylcholine: {
+      id: 'acetylcholine',
+      name: 'Acetylcholine Focus',
+      label: '🌊 Acetylcholine Focus',
+      colorHex: '#06b6d4',
+      colorNum: 0x06B6D4,
+      secondaryHex: '#38bdf8',
+      secondaryNum: 0x38BDF8,
+      speedMultiplier: 1.4,
+      rotationMultiplier: 1.2,
+      coreEmissiveIntensity: 1.3,
+      coreScaleMultiplier: 1.1,
+      filamentOpacity: 0.85,
+      pulseFrequency: 2.6,
+      desc: 'Electric Cyan, sharpened filament opacity, deep encoding beam lock.',
+    },
+    serotonin: {
+      id: 'serotonin',
+      name: 'Serotonin Consolidation',
+      label: '💜 Serotonin Consolidation',
+      colorHex: '#a855f7',
+      colorNum: 0xA855F7,
+      secondaryHex: '#c084fc',
+      secondaryNum: 0xC084FC,
+      speedMultiplier: 0.6,
+      rotationMultiplier: 0.5,
+      coreEmissiveIntensity: 1.0,
+      coreScaleMultiplier: 1.05,
+      filamentOpacity: 0.45,
+      pulseFrequency: 0.8,
+      desc: 'Deep Violet, slow 0.6x harmonic consolidation waves & dream-replay ripples.',
+    },
+  };
+
   // Helper to generate soft radial glow particle sprite in-memory (no external image assets)
   function createGlowTexture(colorStr, radius = 64) {
     const canvas = document.createElement('canvas');
@@ -263,7 +347,11 @@
       this.tourStep = 0;
       this.tourTimer = null;
       this.pathwayBannerTimer = null;
+      this.birthBannerTimer = null;
       this.activePathway = null;
+      this.currentNeuromodulator = 'balanced';
+      this.neuromodulatorState = NEUROMODULATOR_MODES.balanced;
+      this.trailingSparkles = [];
 
       this.tourStops = [
         {
@@ -1943,6 +2031,408 @@
       }
     }
 
+    // ==============================================================================
+    // ✦ WAVE 3: INTERACTIVE 3D NEUROMODULATOR AURA SWITCHER
+    // ==============================================================================
+    setNeuromodulatorMode(mode) {
+      const modeKey = String(mode || '').toLowerCase().trim();
+      const state = NEUROMODULATOR_MODES[modeKey] || NEUROMODULATOR_MODES.balanced;
+      this.currentNeuromodulator = state.id;
+      this.neuromodulatorState = state;
+      this.stats.actionFrequency = state.pulseFrequency;
+
+      // 1. Transform Netrunner Cyber-Cortex 3D Core Model
+      if (this.netrunnerCore) {
+        const nc = this.netrunnerCore;
+        if (nc.innerCoreMesh && nc.innerCoreMesh.material) {
+          nc.innerCoreMesh.material.color.setHex(state.colorNum);
+          nc.innerCoreMesh.material.emissive.setHex(state.colorNum);
+          nc.innerCoreMesh.material.emissiveIntensity = state.coreEmissiveIntensity;
+          const s = state.coreScaleMultiplier;
+          nc.innerCoreMesh.scale.set(s, s, s);
+        }
+        if (nc.brainWireMesh && nc.brainWireMesh.material) {
+          nc.brainWireMesh.material.color.setHex(state.secondaryNum);
+          nc.brainWireMesh.material.opacity = Math.min(0.9, state.filamentOpacity + 0.1);
+        }
+        if (nc.visorMesh && nc.visorMesh.material) {
+          nc.visorMesh.material.color.setHex(state.colorNum);
+        }
+        if (nc.gimbal1 && nc.gimbal1.material) {
+          nc.gimbal1.material.color.setHex(state.colorNum);
+          nc.gimbal1.material.opacity = Math.min(0.95, state.filamentOpacity + 0.2);
+        }
+        if (nc.gimbal2 && nc.gimbal2.material) {
+          nc.gimbal2.material.color.setHex(state.secondaryNum);
+          nc.gimbal2.material.opacity = Math.min(0.85, state.filamentOpacity + 0.1);
+        }
+        if (nc.gimbal3 && nc.gimbal3.material) {
+          nc.gimbal3.material.color.setHex(state.colorNum);
+          nc.gimbal3.material.opacity = Math.min(0.75, state.filamentOpacity);
+        }
+        if (nc.spineGroup && nc.spineGroup.children) {
+          nc.spineGroup.children.forEach((disc, i) => {
+            if (disc.material) {
+              const col = i % 2 === 0 ? state.colorNum : state.secondaryNum;
+              disc.material.color.setHex(col);
+              disc.material.emissive.setHex(col);
+              disc.material.emissiveIntensity = state.coreEmissiveIntensity * 0.7;
+            }
+          });
+        }
+      }
+
+      // 2. Modulate Synaptic Filaments
+      this.filamentCurves.forEach(item => {
+        if (!item.line || !item.line.material) return;
+        const weight = item.weight || 0.2;
+        if (state.id === 'acetylcholine') {
+          item.line.material.color.setHex(weight >= 0.5 ? 0x06B6D4 : 0x00E5FF);
+          item.line.material.opacity = Math.max(0.65, weight * 0.95);
+        } else if (state.id === 'dopamine') {
+          item.line.material.color.setHex(0xF59E0B);
+          item.line.material.opacity = Math.max(0.5, weight * 0.85);
+        } else if (state.id === 'norepinephrine') {
+          item.line.material.color.setHex(0xF43F5E);
+          item.line.material.opacity = Math.max(0.55, weight * 0.9);
+        } else if (state.id === 'serotonin') {
+          item.line.material.color.setHex(0xA855F7);
+          item.line.material.opacity = Math.max(0.3, weight * 0.55);
+        } else {
+          if (weight >= 0.6) {
+            item.line.material.color.setHex(0xFFD700);
+            item.line.material.opacity = 0.9;
+          } else if (weight >= 0.3) {
+            item.line.material.color.setHex(0x00E5FF);
+            item.line.material.opacity = 0.65;
+          } else {
+            item.line.material.color.setHex(0x4A6CF7);
+            item.line.material.opacity = 0.35;
+          }
+        }
+      });
+
+      // 3. Shockwave Aura Explosion from Netrunner Cyber-Cortex
+      this.fireShockwave(new THREE.Vector3(0, 0, 0), state.colorNum, 2.6);
+      if (state.id === 'norepinephrine') {
+        setTimeout(() => {
+          this.fireShockwave(new THREE.Vector3(0, 0, 0), state.secondaryNum, 3.2);
+        }, 120);
+      }
+
+      // 4. Bio-Resonant Audio Synthesis
+      if (this.audio) {
+        if (state.id === 'dopamine') this.audio.playActionPotential(660);
+        else if (state.id === 'norepinephrine') this.audio.playActionPotential(880);
+        else if (state.id === 'acetylcholine') this.audio.playActionPotential(440);
+        else if (state.id === 'serotonin') this.audio.playSleepRipple();
+        else this.audio.playActionPotential(528);
+      }
+
+      // 5. Update DOM HUD telemetry
+      const hudNeuromod = document.getElementById('hud-neuromod-state');
+      if (hudNeuromod) {
+        hudNeuromod.textContent = state.label;
+        hudNeuromod.style.color = state.colorHex;
+      }
+      const hudFreq = document.getElementById('hud-action-freq');
+      if (hudFreq) {
+        hudFreq.textContent = state.pulseFrequency.toFixed(1) + ' Hz';
+        hudFreq.style.color = state.colorHex;
+      }
+
+      // 6. Update Neuromodulator Buttons in HUD
+      document.querySelectorAll('.neuromod-pill').forEach(btn => {
+        btn.classList.toggle('active', btn.id === 'neuromod-' + state.id);
+      });
+
+      this.updateHudStats();
+      return state;
+    }
+
+    // ==============================================================================
+    // ✦ WAVE 3: REAL-TIME 3D ENGRAM BIRTH PROJECTILE & SLINGSHOT
+    // ==============================================================================
+    spawnTrailingSparkle(pos, colorNum = 0xFFD700) {
+      const sparkGeo = new THREE.SphereGeometry(0.9, 8, 8);
+      const sparkMat = new THREE.MeshBasicMaterial({
+        color: colorNum,
+        transparent: true,
+        opacity: 0.9,
+        blending: THREE.AdditiveBlending,
+      });
+      const spark = new THREE.Mesh(sparkGeo, sparkMat);
+      spark.position.copy(pos);
+      spark.position.x += (Math.random() - 0.5) * 4;
+      spark.position.y += (Math.random() - 0.5) * 4;
+      spark.position.z += (Math.random() - 0.5) * 4;
+      this.scene.add(spark);
+      this.trailingSparkles.push({
+        mesh: spark,
+        geo: sparkGeo,
+        mat: sparkMat,
+        life: 1.0,
+        decay: 2.4,
+      });
+    }
+
+    showEngramBirthBanner(engram, galaxy) {
+      const banner = document.getElementById('nebula-birth-banner');
+      if (!banner) return;
+      const title = escapeHtml(engram.label || engram.text || 'Engram').slice(0, 48);
+      banner.innerHTML = `
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:20px; color:${galaxy.hex};">✦</span>
+          <div>
+            <div style="font-weight:750; font-size:12px; color:#FFD700; letter-spacing:0.6px; text-transform:uppercase;">
+              3D ENGRAM BIRTH &bull; CORTICAL FORGE
+            </div>
+            <div style="font-size:11px; color:#EDEFF2;">
+              ${title} &rarr; <strong style="color:${galaxy.hex};">${galaxy.name}</strong>
+            </div>
+          </div>
+        </div>
+      `;
+      banner.classList.add('visible');
+      if (this.birthBannerTimer) clearTimeout(this.birthBannerTimer);
+      this.birthBannerTimer = setTimeout(() => {
+        banner.classList.remove('visible');
+      }, 3400);
+    }
+
+    anchorNewEngramNode(engram, galaxy, targetPos) {
+      const sphereGeo = new THREE.SphereGeometry(1, 24, 24);
+      const importance = typeof engram.importance === 'number' ? engram.importance : 1.2;
+      const accessCount = engram.access_count || 1;
+      const nodeRadius = Math.max(3.2, Math.min(10.0, (3.2 * importance) + Math.log1p(accessCount) * 0.8));
+
+      const mat = new THREE.MeshStandardMaterial({
+        color: galaxy.color,
+        emissive: galaxy.color,
+        emissiveIntensity: 0.75,
+        roughness: 0.25,
+        metalness: 0.8,
+      });
+
+      const mesh = new THREE.Mesh(sphereGeo, mat);
+      mesh.scale.set(nodeRadius, nodeRadius, nodeRadius);
+      mesh.position.copy(targetPos);
+      mesh.userData = {
+        nodeData: engram,
+        galaxy: galaxy,
+        baseColor: galaxy.color,
+        baseRadius: nodeRadius,
+        isPulsing: false,
+      };
+
+      this.scene.add(mesh);
+      this.nodeMeshes.set(String(engram.id), mesh);
+      this.stats.totalEngrams = this.nodeMeshes.size;
+      this.updateHudStats();
+      return mesh;
+    }
+
+    createFilamentBetweenNodes(srcObj, tgtObj, weight = 0.8, color = 0xFFD700) {
+      const p1 = srcObj.position;
+      const p2 = tgtObj.position;
+      const midPoint = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
+      const dist = p1.distanceTo(p2);
+      const arcHeight = Math.min(65, dist * 0.25);
+      midPoint.y += arcHeight;
+
+      const curve = new THREE.QuadraticBezierCurve3(p1, midPoint, p2);
+      const points = curve.getPoints(24);
+      const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
+      const lineMat = new THREE.LineBasicMaterial({
+        color: color,
+        transparent: true,
+        opacity: 0.9,
+        blending: THREE.AdditiveBlending,
+      });
+      const line = new THREE.Line(lineGeo, lineMat);
+      this.scene.add(line);
+
+      const fil = {
+        curve,
+        line,
+        sourceId: String(srcObj.id),
+        targetId: String(tgtObj.id),
+        weight,
+      };
+      this.filamentCurves.push(fil);
+
+      this.spawnPlasmaPulse(curve, weight, color, 2.5);
+      this.stats.totalSynapses = this.filamentCurves.length;
+      this.updateHudStats();
+      return fil;
+    }
+
+    spawnMemoryBurst(memoryData = {}, options = {}) {
+      const engram = {
+        id: memoryData.id || ('engram_' + Date.now() + '_' + Math.floor(Math.random() * 1000)),
+        label: memoryData.label || memoryData.text || ('ENGRAM #' + Math.floor(1000 + Math.random() * 9000)),
+        text: memoryData.text || memoryData.label || 'Sovereign STDP memory engram synthesized in 3D Netrunner Cyber-Cortex.',
+        category: memoryData.category || 'insight',
+        agent_id: memoryData.agent_id || 'azoth',
+        importance: typeof memoryData.importance === 'number' ? memoryData.importance : 1.2,
+        access_count: memoryData.access_count || 1,
+        tags: Array.isArray(memoryData.tags) ? memoryData.tags : ['neural', 'stdp', 'cortex'],
+        created_at: memoryData.created_at || (Date.now() / 1000),
+      };
+
+      const targetGalaxy = this.determineGalaxy(engram);
+
+      const spread = 45;
+      const targetPos = new THREE.Vector3(
+        targetGalaxy.center.x + (Math.random() - 0.5) * spread * 2,
+        targetGalaxy.center.y + (Math.random() - 0.5) * spread * 1.5,
+        targetGalaxy.center.z + (Math.random() - 0.5) * spread * 2
+      );
+
+      const inboundStart = new THREE.Vector3(
+        this.camera ? this.camera.position.x * 0.5 : 0,
+        (this.camera ? this.camera.position.y : 150) + 75,
+        (this.camera ? this.camera.position.z * 0.5 : 200) + 50
+      );
+      const corePos = new THREE.Vector3(0, 0, 0);
+
+      // High-luminance inbound projectile
+      const projectileGeo = new THREE.SphereGeometry(3.5, 16, 16);
+      const projectileMat = new THREE.MeshBasicMaterial({
+        color: 0xFFFFFF,
+        transparent: true,
+        opacity: 0.98,
+        blending: THREE.AdditiveBlending,
+      });
+      const projectile = new THREE.Mesh(projectileGeo, projectileMat);
+      projectile.position.copy(inboundStart);
+      this.scene.add(projectile);
+
+      const glowTex = createGlowTexture(targetGalaxy.hex, 48);
+      const glowMat = new THREE.SpriteMaterial({
+        map: glowTex,
+        color: targetGalaxy.color,
+        transparent: true,
+        opacity: 0.9,
+        blending: THREE.AdditiveBlending,
+      });
+      const glowSprite = new THREE.Sprite(glowMat);
+      glowSprite.scale.set(26, 26, 1);
+      projectile.add(glowSprite);
+
+      if (this.audio) this.audio.playActionPotential(720);
+
+      this.showEngramBirthBanner(engram, targetGalaxy);
+
+      // PHASE 1: Inbound flight to Netrunner Cyber-Cortex core
+      const inboundDuration = 520; // ms
+      const inboundStartT = performance.now();
+
+      const inboundInterval = setInterval(() => {
+        const elapsed = performance.now() - inboundStartT;
+        const p = Math.min(1.0, elapsed / inboundDuration);
+        const ease = p * p;
+
+        projectile.position.lerpVectors(inboundStart, corePos, ease);
+        const pScale = 1.0 + Math.sin(p * Math.PI) * 0.7;
+        projectile.scale.set(pScale, pScale, pScale);
+
+        if (p >= 1.0) {
+          clearInterval(inboundInterval);
+          this.scene.remove(projectile);
+          projectileGeo.dispose();
+          projectileMat.dispose();
+
+          // PHASE 2: Cortical Collision & Flash
+          if (this.netrunnerCore && this.netrunnerCore.innerCoreMesh) {
+            this.flashNode(this.netrunnerCore.innerCoreMesh, 0xFFFFFF, 2.4);
+          }
+          this.fireShockwave(corePos, targetGalaxy.color, 3.8);
+          this.fireShockwave(corePos, 0xFFFFFF, 2.2);
+          if (this.audio) this.audio.playHarmonicChord(528);
+
+          // PHASE 3: Outbound Slingshot into Target Galaxy
+          const arcMid = new THREE.Vector3(
+            (corePos.x + targetPos.x) * 0.5,
+            Math.max(corePos.y, targetPos.y) + 70,
+            (corePos.z + targetPos.z) * 0.5
+          );
+          const slingshotCurve = new THREE.QuadraticBezierCurve3(corePos, arcMid, targetPos);
+
+          const outboundGeo = new THREE.SphereGeometry(3.0, 16, 16);
+          const outboundMat = new THREE.MeshBasicMaterial({
+            color: targetGalaxy.color,
+            transparent: true,
+            opacity: 0.95,
+            blending: THREE.AdditiveBlending,
+          });
+          const outboundStar = new THREE.Mesh(outboundGeo, outboundMat);
+          const outGlow = new THREE.Sprite(new THREE.SpriteMaterial({
+            map: glowTex,
+            color: 0xFFFFFF,
+            transparent: true,
+            opacity: 0.85,
+            blending: THREE.AdditiveBlending,
+          }));
+          outGlow.scale.set(22, 22, 1);
+          outboundStar.add(outGlow);
+          this.scene.add(outboundStar);
+
+          const outboundDuration = 820; // ms
+          const outboundStartT = performance.now();
+
+          const outboundInterval = setInterval(() => {
+            const outElapsed = performance.now() - outboundStartT;
+            const outP = Math.min(1.0, outElapsed / outboundDuration);
+            const outEase = 0.5 - Math.cos(outP * Math.PI) / 2;
+
+            const curPt = slingshotCurve.getPoint(outEase);
+            outboundStar.position.copy(curPt);
+
+            if (Math.random() < 0.4) {
+              this.spawnTrailingSparkle(curPt, targetGalaxy.color);
+            }
+
+            if (outP >= 1.0) {
+              clearInterval(outboundInterval);
+              // PHASE 4: Arrival & Star Anchoring in Target Galaxy
+              this.scene.remove(outboundStar);
+              outboundGeo.dispose();
+              outboundMat.dispose();
+
+              this.fireShockwave(targetPos, targetGalaxy.color, 2.5);
+              if (this.audio) this.audio.playActionPotential(660);
+
+              const newNodeMesh = this.anchorNewEngramNode(engram, targetGalaxy, targetPos);
+
+              this.createFilamentBetweenNodes(
+                { position: corePos, id: 'netrunner-core-0' },
+                { position: targetPos, id: String(engram.id) },
+                0.95,
+                targetGalaxy.color
+              );
+
+              if (options.focusCamera !== false) {
+                const camTarget = new THREE.Vector3(
+                  targetPos.x + 38,
+                  targetPos.y + 22,
+                  targetPos.z + 70
+                );
+                this.glideCameraTo(camTarget, targetPos, 1.4);
+              }
+
+              setTimeout(() => {
+                if (this.nodeMeshes.has(String(engram.id))) {
+                  this.focusNode(engram.id);
+                }
+              }, 300);
+            }
+          }, 16);
+        }
+      }, 16);
+      return engram;
+    }
+
     animate() {
       requestAnimationFrame(() => this.animate());
 
@@ -1982,38 +2472,41 @@
       }
 
       // 4. Galaxy Cores & Netrunner Cyber-Cortex rotation
+      const rotMult = this.neuromodulatorState ? this.neuromodulatorState.rotationMultiplier : 1.0;
       this.galaxyCores.forEach((c) => {
-        if (c.ring) c.ring.rotation.z += 0.005;
+        if (c.ring) c.ring.rotation.z += 0.005 * rotMult;
       });
       if (this.netrunnerCore) {
         const nc = this.netrunnerCore;
         if (nc.brainWireMesh) {
-          nc.brainWireMesh.rotation.y += 0.004;
-          nc.brainWireMesh.rotation.x = Math.sin(time * 0.6) * 0.15;
+          nc.brainWireMesh.rotation.y += 0.004 * rotMult;
+          nc.brainWireMesh.rotation.x = Math.sin(time * 0.6 * rotMult) * 0.15;
         }
         if (nc.innerCoreMesh) {
-          nc.innerCoreMesh.rotation.y -= 0.008;
-          const pulseScale = 1.0 + Math.sin(time * 2.5) * 0.08;
+          nc.innerCoreMesh.rotation.y -= 0.008 * rotMult;
+          const baseScale = this.neuromodulatorState ? this.neuromodulatorState.coreScaleMultiplier : 1.0;
+          const pulseScale = baseScale * (1.0 + Math.sin(time * 2.5 * rotMult) * 0.08);
           nc.innerCoreMesh.scale.set(pulseScale, pulseScale, pulseScale);
         }
         if (nc.gimbal1) {
-          nc.gimbal1.rotation.z += 0.012;
-          nc.gimbal1.rotation.x += 0.006;
+          nc.gimbal1.rotation.z += 0.012 * rotMult;
+          nc.gimbal1.rotation.x += 0.006 * rotMult;
         }
         if (nc.gimbal2) {
-          nc.gimbal2.rotation.y -= 0.014;
-          nc.gimbal2.rotation.z += 0.005;
+          nc.gimbal2.rotation.y -= 0.014 * rotMult;
+          nc.gimbal2.rotation.z += 0.005 * rotMult;
         }
         if (nc.gimbal3) {
-          nc.gimbal3.rotation.x += 0.01;
-          nc.gimbal3.rotation.y += 0.008;
+          nc.gimbal3.rotation.x += 0.01 * rotMult;
+          nc.gimbal3.rotation.y += 0.008 * rotMult;
         }
       }
 
       // 5. Plasma Action Potential Pulses along Bezier Filaments
+      const speedMult = this.neuromodulatorState ? this.neuromodulatorState.speedMultiplier : 1.0;
       for (let i = this.plasmaPulses.length - 1; i >= 0; i--) {
         const pulse = this.plasmaPulses[i];
-        pulse.t += delta * pulse.speed;
+        pulse.t += delta * pulse.speed * speedMult;
         if (pulse.t >= 1.0) {
           if (pulse.isOneShot) {
             this.scene.remove(pulse.mesh);
@@ -2029,6 +2522,21 @@
         pulse.mesh.position.copy(pos);
       }
 
+      // 5b. Update Trailing Sparkles
+      for (let i = this.trailingSparkles.length - 1; i >= 0; i--) {
+        const s = this.trailingSparkles[i];
+        s.life -= delta * s.decay;
+        if (s.life <= 0) {
+          this.scene.remove(s.mesh);
+          if (s.geo) s.geo.dispose();
+          if (s.mat) s.mat.dispose();
+          this.trailingSparkles.splice(i, 1);
+        } else {
+          s.mat.opacity = s.life * 0.85;
+          s.mesh.scale.set(s.life, s.life, s.life);
+        }
+      }
+
       // 6. Action frequency decay toward resting baseline (1.2 Hz)
       if (this.stats.actionFrequency > 1.2) {
         this.stats.actionFrequency = Math.max(1.2, this.stats.actionFrequency - delta * 0.15);
@@ -2040,6 +2548,7 @@
     }
   }
 
-  // Expose NebulaUniverse globally
+  // Expose NebulaUniverse & NebulaEngine globally
   window.NebulaUniverse = NebulaUniverse;
+  window.NebulaEngine = NebulaUniverse;
 })();
