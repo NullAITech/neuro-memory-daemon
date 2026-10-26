@@ -2549,6 +2549,7 @@ curl -X POST http://127.0.0.1:8788/api/recall \
               <span class="obs-doctor-badge" id="obs-doctor-badge">100/100 ✦ PERFECT</span>
             </div>
             <div style="display:flex; align-items:center; gap:8px;">
+              <button class="btn btn-outlined" id="btn-obsidian-dream" style="padding:5px 12px; font-size:11.5px; border-color:rgba(168,85,247,0.5); color:#D8B4FE;" onclick="triggerObsidianDream()">🌙 Dream Consolidate</button>
               <button class="btn btn-outlined" style="padding:5px 12px; font-size:11.5px; border-color:rgba(232,121,249,0.4);" onclick="fetchObsidianAudit(true)">🔄 Re-Audit Vault</button>
             </div>
           </div>
@@ -2758,6 +2759,54 @@ curl -X POST http://127.0.0.1:8788/api/recall \
             <pre class="code-preview" id="base-yaml-preview" style="display:none; max-height:480px; overflow-y:auto; font-size:11.5px;"></pre>
           </div>
 
+        </div>
+
+        <!-- Second Brain Note & Web Snippet Ingestor (04-Ingested/) -->
+        <div class="wiki-panel" id="obsidian-ingest-panel" style="margin-top:16px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:20px;">📥</span>
+              <div>
+                <div style="font-size:15px; font-weight:700; color:#38BDF8;">Second Brain Note &amp; Web Snippet Ingestor</div>
+                <div style="font-size:11.5px; color:var(--md-on-surface-variant);">Compile clean Obsidian Flavored Markdown notes directly into <code>04-Ingested/</code> with automatic Hebbian STDP engrams &amp; backlinks.</div>
+              </div>
+            </div>
+            <div style="font-size:11px; font-family:var(--font-mono); color:#9AA0A6;">
+              Vault Target: <span style="color:#38BDF8;">04-Ingested/&lt;slug&gt;.md</span>
+            </div>
+          </div>
+
+          <form onsubmit="handleObsidianIngestSubmit(event)" style="display:flex; flex-direction:column; gap:12px;">
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+              <div>
+                <label style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:#9AA0A6; font-weight:700; display:block; margin-bottom:4px;">Note Title *</label>
+                <input type="text" class="input-field" id="obsidian-ingest-title" required placeholder="e.g. Distributed Consensus in Preempt-RT Linux" style="width:100%; padding:8px 12px; background:#0F0F18; border:1px solid #2A2A38; border-radius:6px; color:#EDEFF2; font-size:12.5px;">
+              </div>
+              <div>
+                <label style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:#9AA0A6; font-weight:700; display:block; margin-bottom:4px;">Source URL / Provenance</label>
+                <input type="text" class="input-field" id="obsidian-ingest-source" placeholder="e.g. https://kernel.org or internal-research" style="width:100%; padding:8px 12px; background:#0F0F18; border:1px solid #2A2A38; border-radius:6px; color:#EDEFF2; font-size:12.5px;">
+              </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr; gap:12px;">
+              <div>
+                <label style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:#9AA0A6; font-weight:700; display:block; margin-bottom:4px;">Tags (comma or space separated)</label>
+                <input type="text" class="input-field" id="obsidian-ingest-tags" placeholder="e.g. linux, kernel, preempt-rt, architecture" style="width:100%; padding:8px 12px; background:#0F0F18; border:1px solid #2A2A38; border-radius:6px; color:#EDEFF2; font-size:12.5px;">
+              </div>
+            </div>
+
+            <div>
+              <label style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:#9AA0A6; font-weight:700; display:block; margin-bottom:4px;">Markdown Content &amp; Findings *</label>
+              <textarea class="textarea-field" id="obsidian-ingest-content" rows="4" required placeholder="Write or paste markdown content with [[wikilinks]], findings, benchmarks, or architectural specifications..." style="width:100%; padding:10px 12px; background:#0F0F18; border:1px solid #2A2A38; border-radius:6px; color:#EDEFF2; font-size:12.5px; font-family:var(--font-mono); resize:vertical;"></textarea>
+            </div>
+
+            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-top:4px;">
+              <div style="font-size:11.5px; color:#9AA0A6;" id="obsidian-ingest-result"></div>
+              <button type="submit" class="btn btn-primary" id="btn-obsidian-ingest-submit" style="background:linear-gradient(135deg,#38BDF8,#0284C7); color:#08080B; font-weight:700; border:none; padding:8px 18px; font-size:12px; border-radius:8px; cursor:pointer;">
+                <span>📥</span> Ingest to Obsidian Vault &amp; STDP Cortex
+              </button>
+            </div>
+          </form>
         </div>
 
         <!-- Maps of Content (MOCs) Notes Inspector -->
@@ -4864,6 +4913,98 @@ curl -X POST http://127.0.0.1:8788/api/recall \
         if (btn) {
           btn.disabled = false;
           btn.innerHTML = '<span>✦</span> Generate Canvas';
+        }
+      }
+    }
+
+    async function triggerObsidianDream() {
+      const btn = document.getElementById('btn-obsidian-dream');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span>⏳</span> Consolidating...';
+      }
+      showToast('🌙 Triggering Hippocampal Sleep Consolidation & Hebbian Synapse Strengthening...', 'info');
+
+      try {
+        const res = await fetch(`${API_BASE}/api/consolidate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ decay_rate: 0.05 })
+        });
+        const data = await res.json();
+        if (res.ok && data.status === 'consolidated') {
+          const strengthened = (data.strengthened_synapses || 0).toLocaleString();
+          const nodes = (data.nodes_processed || 0).toLocaleString();
+          showToast(`🌙 Dream Consolidation Complete: ${strengthened} Hebbian synapses strengthened across ${nodes} engrams!`, 'success');
+          await fetchObsidianAudit();
+          fetchStats(true);
+        } else {
+          showToast('Consolidation failed: ' + (data.error || 'Unknown error'), 'error');
+        }
+      } catch (err) {
+        showToast('Consolidation network error: ' + err.message, 'error');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '🌙 Dream Consolidate';
+        }
+      }
+    }
+
+    async function handleObsidianIngestSubmit(event) {
+      if (event) event.preventDefault();
+      const titleInput = document.getElementById('obsidian-ingest-title');
+      const contentInput = document.getElementById('obsidian-ingest-content');
+      const sourceInput = document.getElementById('obsidian-ingest-source');
+      const tagsInput = document.getElementById('obsidian-ingest-tags');
+      const btn = document.getElementById('btn-obsidian-ingest-submit');
+      const resultEl = document.getElementById('obsidian-ingest-result');
+
+      const title = (titleInput ? titleInput.value : '').trim();
+      const content = (contentInput ? contentInput.value : '').trim();
+      const source = (sourceInput ? sourceInput.value : '').trim() || 'antigravity-studio';
+      const rawTags = (tagsInput ? tagsInput.value : '').trim();
+      const tags = rawTags ? rawTags.split(/[\s,]+/).filter(Boolean) : ['ingested', 'second-brain'];
+
+      if (!title || !content) {
+        showToast('Please provide both Note Title and Content.', 'info');
+        return;
+      }
+
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span>⏳</span> Ingesting Note...';
+      }
+      showToast(`📥 Ingesting [[${title}]] into Obsidian Vault...`, 'info');
+
+      try {
+        const res = await fetch(`${API_BASE}/api/obsidian/ingest`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, content, source, tags })
+        });
+        const data = await res.json();
+        if (res.ok && data.ok) {
+          showToast(`✦ Successfully ingested [[${data.note.title}]] into ${data.note.relPath}!`, 'success');
+          if (titleInput) titleInput.value = '';
+          if (contentInput) contentInput.value = '';
+          if (sourceInput) sourceInput.value = '';
+          if (tagsInput) tagsInput.value = '';
+          if (resultEl) {
+            resultEl.innerHTML = `<span style="color:#10B981; font-weight:700;">✔ Created:</span> <code style="color:#38BDF8;">${escapeHtml(data.note.relPath)}</code> <span style="color:#9AA0A6;">(Memory ID: ${escapeHtml(data.note.memoryId)})</span>`;
+          }
+          await fetchObsidianAudit();
+          await fetchObsidianVaultFiles();
+          fetchMemories();
+        } else {
+          showToast('Ingestion failed: ' + (data.error || 'Unknown error'), 'error');
+        }
+      } catch (err) {
+        showToast('Ingestion network error: ' + err.message, 'error');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<span>📥</span> Ingest to Obsidian Vault &amp; STDP Cortex';
         }
       }
     }
