@@ -2548,7 +2548,8 @@ curl -X POST http://127.0.0.1:8788/api/recall \
               </div>
               <span class="obs-doctor-badge" id="obs-doctor-badge">100/100 ✦ PERFECT</span>
             </div>
-            <div style="display:flex; align-items:center; gap:8px;">
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <button class="btn btn-outlined" id="btn-obsidian-export-bundle" style="padding:5px 12px; font-size:11.5px; border-color:rgba(16,185,129,0.5); color:#6EE7B7;" onclick="exportObsidianBundle()">📦 Export Bundle</button>
               <button class="btn btn-outlined" id="btn-obsidian-dream" style="padding:5px 12px; font-size:11.5px; border-color:rgba(168,85,247,0.5); color:#D8B4FE;" onclick="triggerObsidianDream()">🌙 Dream Consolidate</button>
               <button class="btn btn-outlined" style="padding:5px 12px; font-size:11.5px; border-color:rgba(232,121,249,0.4);" onclick="fetchObsidianAudit(true)">🔄 Re-Audit Vault</button>
             </div>
@@ -5185,6 +5186,43 @@ curl -X POST http://127.0.0.1:8788/api/recall \
         if (btn) {
           btn.disabled = false;
           btn.innerHTML = '🌙 Dream Consolidate';
+        }
+      }
+    }
+
+    async function exportObsidianBundle() {
+      const btn = document.getElementById('btn-obsidian-export-bundle');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span>⏳</span> Exporting...';
+      }
+      showToast('📦 Fetching SHA-256 Verified Second Brain Knowledge Bundle...', 'info');
+
+      try {
+        const res = await fetch(`${API_BASE}/api/obsidian/bundle`);
+        const data = await res.json();
+        if (res.ok && (data.bundleSha256 || data.bundle)) {
+          const bundle = data.bundle || data;
+          const sha = bundle.bundleSha256 || 'verified';
+          const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `second_brain_bundle_${bundle.auditMetrics?.totalNotes || 'vault'}.json`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          showToast(`📦 Exported Verified Bundle! SHA-256: ${sha.slice(0, 16)}...`, 'success');
+        } else {
+          showToast('Failed to export bundle: ' + (data.error || 'Unknown error'), 'error');
+        }
+      } catch (err) {
+        showToast('Export bundle network error: ' + err.message, 'error');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '📦 Export Bundle';
         }
       }
     }

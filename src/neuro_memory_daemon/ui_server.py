@@ -1107,6 +1107,31 @@ health_score: 100
             self._send_json(result)
             return
 
+        # Obsidian Portable Second Brain Knowledge Bundle Endpoint (GET)
+        elif path in ("/api/obsidian/bundle", "/v1/obsidian/bundle"):
+            vault_dir = Path.home() / "Documents" / "Obsidian Vault"
+            bundle_file = vault_dir / "05-Telemetry" / "second_brain_bundle.json"
+            if not bundle_file.exists():
+                try:
+                    script_path = Path("/home/zoth/NullAITech/zoth-os/bin/zoth-second-brain")
+                    if script_path.exists() and os.access(script_path, os.X_OK):
+                        subprocess.run([str(script_path), "bundle"], capture_output=True, timeout=10)
+                except Exception:
+                    pass
+            if bundle_file.exists():
+                try:
+                    data = json.loads(safe_read_text(bundle_file))
+                    if isinstance(data, dict):
+                        if "ok" not in data:
+                            data["ok"] = True
+                        self._send_json(data)
+                        return
+                except Exception as ex:
+                    self._send_json({"ok": False, "error": str(ex)}, status=500)
+                    return
+            self._send_json({"ok": False, "error": "Bundle not available"}, status=404)
+            return
+
         # Obsidian Unified Second Brain Search Endpoint (GET)
         elif path in ("/api/obsidian/search", "/v1/obsidian/search"):
             vault_dir = Path.home() / "Documents" / "Obsidian Vault"

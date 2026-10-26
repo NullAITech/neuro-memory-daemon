@@ -726,6 +726,33 @@ def test_mcp_obsidian_daily_log(obsidian_server: tuple[MemoryUIServer, str, Memo
     assert "HTTP MCP tool invocation verification." in http_data["result"]["content"]
 
 
+def test_obsidian_bundle_get(obsidian_server: tuple[MemoryUIServer, str, MemoryDaemon]):
+    """Test GET /api/obsidian/bundle returns SHA-256 verified knowledge bundle."""
+    _, base_url, _ = obsidian_server
+    status, _, body = _http_get(f"{base_url}/api/obsidian/bundle")
+    assert status == 200
+    data = json.loads(body.decode("utf-8"))
+    assert data["ok"] is True
+    assert data["version"] == "1.0.0"
+    assert data["healthScore"] == 100
+    assert "bundleSha256" in data
+    assert len(data["bundleSha256"]) == 64
+    assert "auditMetrics" in data
+    metrics = data["auditMetrics"]
+    assert metrics["totalNotes"] >= 1720
+    assert metrics["canvasesCount"] >= 14
+    assert metrics["basesCount"] >= 18
+    assert metrics["wikiCount"] >= 10
+    assert "wikiArticles" in data
+    assert len(data["wikiArticles"]) >= 10
+    assert "canvases" in data
+    assert len(data["canvases"]) >= 14
+    assert "bases" in data
+    assert len(data["bases"]) >= 18
+    assert "topHubs" in data
+    assert "dailyNote" in data
+
+
 
 
 
