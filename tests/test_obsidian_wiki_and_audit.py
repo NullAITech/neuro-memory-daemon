@@ -282,3 +282,73 @@ def test_obsidian_ingest_post(obsidian_server: tuple[MemoryUIServer, str, Memory
         pass
 
 
+def test_obsidian_search_get(obsidian_server: tuple[MemoryUIServer, str, MemoryDaemon]):
+    """Test GET /api/obsidian/search returns unified vault and STDP matches."""
+    _, base_url, daemon = obsidian_server
+
+    # Seed an STDP engram into the test daemon
+    daemon.store(
+        text="Vaelor PoUW consensus mechanism secures autonomous agent swarm payments.",
+        tags=["vaelor", "pouw", "consensus"],
+        importance=0.95,
+        category="semantic"
+    )
+
+    # Empty search query
+    status, _, body = _http_get(f"{base_url}/api/obsidian/search?q=")
+    assert status == 200
+    empty_data = json.loads(body.decode("utf-8"))
+    assert empty_data["ok"] is True
+    assert empty_data["vaultCount"] == 0
+    assert empty_data["stdpCount"] == 0
+
+    # Search for "Vaelor"
+    status, _, body = _http_get(f"{base_url}/api/obsidian/search?q=Vaelor")
+    assert status == 200
+    data = json.loads(body.decode("utf-8"))
+    assert data["ok"] is True
+    assert data["query"] == "Vaelor"
+    assert data["vaultCount"] > 0
+    assert "vaultMatches" in data
+    assert "stdpMatches" in data
+    assert data["stdpCount"] > 0
+
+    first_vm = data["vaultMatches"][0]
+    assert "title" in first_vm
+    assert "relPath" in first_vm
+    assert "type" in first_vm
+    assert "snippet" in first_vm
+    assert "wikilinks" in first_vm
+
+    first_sm = data["stdpMatches"][0]
+    assert "id" in first_sm
+    assert "content" in first_sm
+    assert "importance" in first_sm
+    assert "category" in first_sm
+    assert "tags" in first_sm
+    assert "Vaelor" in first_sm["content"] or "vaelor" in [t.lower() for t in first_sm["tags"]]
+
+
+def test_obsidian_search_post(obsidian_server: tuple[MemoryUIServer, str, MemoryDaemon]):
+    """Test POST /api/obsidian/search returns unified search results."""
+    _, base_url, daemon = obsidian_server
+
+    daemon.store(
+        text="Hermes agent fleet synchronizes cognitive context across ZothOS nodes.",
+        tags=["hermes", "fleet", "zothos"],
+        importance=0.88,
+        category="episodic"
+    )
+
+    status, _, body = _http_post(f"{base_url}/api/obsidian/search", {"query": "Hermes"})
+    assert status == 200
+    data = json.loads(body.decode("utf-8"))
+    assert data["ok"] is True
+    assert data["query"] == "Hermes"
+    assert "vaultMatches" in data
+    assert "stdpMatches" in data
+    assert data["stdpCount"] > 0
+    assert any("Hermes" in sm["content"] for sm in data["stdpMatches"])
+
+
+

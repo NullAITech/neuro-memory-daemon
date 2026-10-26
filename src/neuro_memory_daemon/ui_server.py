@@ -186,6 +186,114 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
         if not getattr(self, "_is_head", False):
             self.wfile.write(payload)
 
+    def _perform_obsidian_search(self, vault_dir: Path, daemon: Any, query: str, limit: int = 30) -> Dict[str, Any]:
+        q = (query or "").strip()
+        if not q:
+            return {
+                "ok": True,
+                "query": "",
+                "vaultCount": 0,
+                "stdpCount": 0,
+                "vaultMatches": [],
+                "stdpMatches": []
+            }
+
+        q_lower = q.lower()
+        vault_matches = []
+
+        if vault_dir.exists():
+            for p in vault_dir.rglob("*"):
+                if not p.is_file() or any(part.startswith(".") for part in p.parts):
+                    continue
+                suf = p.suffix.lower()
+                if suf not in (".md", ".canvas", ".base"):
+                    continue
+
+                stem = p.stem
+                rel = str(p.relative_to(vault_dir))
+                name_matched = (q_lower in stem.lower()) or (q_lower in rel.lower())
+
+                try:
+                    content = safe_read_text(p)
+                except Exception:
+                    content = ""
+
+                idx = content.lower().find(q_lower)
+                if name_matched or idx != -1:
+                    if idx != -1:
+                        start = max(0, idx - 60)
+                        end = min(len(content), idx + len(q) + 80)
+                        snippet = content[start:end].replace("\n", " ").strip()
+                    else:
+                        snippet = content[:140].replace("\n", " ").strip()
+
+                    wikilinks = re.findall(r"\[\[([^\]|#]+)", content)
+                    dedup_wikilinks = list(dict.fromkeys(w.strip() for w in wikilinks if w.strip()))[:8]
+                    mtype = "markdown" if suf == ".md" else ("canvas" if suf == ".canvas" else "base")
+                    rank = 0 if name_matched else 1
+                    vault_matches.append((rank, {
+                        "title": stem,
+                        "relPath": rel,
+                        "type": mtype,
+                        "snippet": snippet,
+                        "wikilinks": dedup_wikilinks,
+                    }))
+
+        vault_matches.sort(key=lambda x: x[0])
+        vault_results = [m[1] for m in vault_matches[:limit]]
+
+        # STDP Cortex Engram search
+        stdp_results = []
+        seen_ids = set()
+
+        if hasattr(daemon, "search"):
+            try:
+                s_matches = daemon.search(query=q, limit=limit)
+                for m in s_matches:
+                    mid = m.get("id")
+                    if mid and mid not in seen_ids:
+                        seen_ids.add(mid)
+                        stdp_results.append({
+                            "id": mid,
+                            "content": m.get("text", "") or m.get("content", ""),
+                            "importance": float(m.get("importance", 0.5)),
+                            "category": m.get("category", "episodic"),
+                            "tags": m.get("tags", []),
+                        })
+            except Exception:
+                pass
+
+        if hasattr(daemon, "nodes") and isinstance(daemon.nodes, dict):
+            lock = getattr(daemon, "_lock", None)
+            from contextlib import nullcontext
+            ctx = lock if lock else nullcontext()
+            with ctx:
+                for nid, node in daemon.nodes.items():
+                    if nid in seen_ids:
+                        continue
+                    text = getattr(node, "text", "") or ""
+                    tags = getattr(node, "tags", []) or []
+                    if q_lower in text.lower() or any(q_lower in t.lower() for t in tags):
+                        seen_ids.add(nid)
+                        stdp_results.append({
+                            "id": getattr(node, "id", nid),
+                            "content": text,
+                            "importance": float(getattr(node, "importance", 0.5)),
+                            "category": getattr(node, "category", "episodic"),
+                            "tags": tags,
+                        })
+                        if len(stdp_results) >= limit:
+                            break
+
+        return {
+            "ok": True,
+            "query": q,
+            "vaultCount": len(vault_results),
+            "stdpCount": len(stdp_results),
+            "vaultMatches": vault_results,
+            "stdpMatches": stdp_results[:limit],
+        }
+
     def do_OPTIONS(self) -> None:
         """Handle CORS preflight requests."""
         self.send_response(204)
@@ -654,6 +762,18 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
             })
             return
 
+        # Obsidian Unified Second Brain Search Endpoint (GET)
+        elif path in ("/api/obsidian/search", "/v1/obsidian/search"):
+            vault_dir = Path.home() / "Documents" / "Obsidian Vault"
+            q = params.get("q", params.get("query", [""]))[0]
+            try:
+                limit = int(params.get("limit", ["30"])[0])
+            except (ValueError, TypeError):
+                limit = 30
+            result = self._perform_obsidian_search(vault_dir, daemon, q, limit=limit)
+            self._send_json(result)
+            return
+
         # Serve Static UI Files
         self._serve_static(path)
 
@@ -1040,6 +1160,18 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
                     "memoryId": rec.get("id") if isinstance(rec, dict) else getattr(rec, "id", None),
                 }
             }, status=201)
+            return
+
+        # Obsidian Unified Second Brain Search Endpoint (POST)
+        if path in ("/api/obsidian/search", "/v1/obsidian/search"):
+            vault_dir = Path.home() / "Documents" / "Obsidian Vault"
+            q = str(body.get("query") or body.get("q") or "").strip()
+            try:
+                limit = int(body.get("limit", 30))
+            except (ValueError, TypeError):
+                limit = 30
+            result = self._perform_obsidian_search(vault_dir, daemon, q, limit=limit)
+            self._send_json(result)
             return
 
         # Two-Way Obsidian Second Brain <-> Neuro-Memory STDP Synchronization
