@@ -98,15 +98,21 @@ def _parse_wiki_article(path: Path) -> Dict[str, Any]:
                     tags = re.findall(r"[\w-]+", v)
 
     exec_summary = ""
-    summary_match = re.search(r">\s*\[!abstract\]\s*(?:Executive Summary)?\s*\n((?:>.*\n?)+)", text)
+    summary_match = re.search(r">\s*\[!abstract\][^\n]*\n((?:>.*\n?)+)", text)
     if summary_match:
         summary_raw = summary_match.group(1)
         exec_summary = "\n".join(re.sub(r"^>\s?", "", l) for l in summary_raw.splitlines()).strip()
 
+    try:
+        vault_dir = Path.home() / "Documents" / "Obsidian Vault"
+        rel_path = str(path.relative_to(vault_dir))
+    except Exception:
+        rel_path = f"06-Wiki/{path.name}"
+
     return {
         "title": title,
         "filename": path.name,
-        "path": f"06-Wiki/{path.name}",
+        "path": rel_path,
         "created": created,
         "updated": updated,
         "confidence": confidence,
@@ -371,8 +377,12 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
                 candidate_files = list((vault_dir / "Agents").rglob("*.md"))
             elif "daemon" in tags and (vault_dir / "OS" / "Daemons").exists():
                 candidate_files = list((vault_dir / "OS" / "Daemons").rglob("*.md"))
-            elif "wiki" in tags and (vault_dir / "06-Wiki").exists():
-                candidate_files = list((vault_dir / "06-Wiki").rglob("*.md"))
+            elif "wiki" in tags:
+                wiki_dirs = [vault_dir / "06-Wiki", vault_dir / "05 - Knowledge Base" / "Karpathy LLM Wiki"]
+                candidate_files = []
+                for wd in wiki_dirs:
+                    if wd.exists():
+                        candidate_files.extend(list(wd.rglob("*.md")))
             else:
                 candidate_files = list(vault_dir.rglob("*.md"))
 
@@ -681,7 +691,7 @@ health_score: 100
             parts = p_path.relative_to(vault_dir).parts
             if len(parts) > 1:
                 c = parts[0]
-                if c == "06-Wiki": return "Wiki"
+                if c == "06-Wiki" or (len(parts) > 2 and parts[0] == "05 - Knowledge Base" and parts[1] == "Karpathy LLM Wiki"): return "Wiki"
                 if c == "05-Telemetry": return "Telemetry"
                 if c == "04-Ingested": return "Ingested"
                 if c == "07-Daily": return "Daily"
@@ -1290,13 +1300,16 @@ health_score: 100
         # Obsidian Karpathy LLM Wiki List Endpoint
         elif path in ("/api/obsidian/wiki", "/v1/obsidian/wiki"):
             vault_dir = Path.home() / "Documents" / "Obsidian Vault"
-            wiki_dir = vault_dir / "06-Wiki"
+            wiki_dirs = [vault_dir / "06-Wiki", vault_dir / "05 - Knowledge Base" / "Karpathy LLM Wiki"]
             articles = []
-            if wiki_dir.exists():
-                for p in sorted(wiki_dir.glob("*.md")):
-                    if not p.is_file() or p.name.startswith("."):
-                        continue
-                    articles.append(_parse_wiki_article(p))
+            seen_files = set()
+            for wd in wiki_dirs:
+                if wd.exists():
+                    for p in sorted(wd.glob("*.md")):
+                        if not p.is_file() or p.name.startswith(".") or p.name in seen_files:
+                            continue
+                        seen_files.add(p.name)
+                        articles.append(_parse_wiki_article(p))
             self._send_json({
                 "ok": True,
                 "count": len(articles),
@@ -1347,7 +1360,15 @@ health_score: 100
                         except Exception:
                             pass
 
-            wiki_files = list((vault_dir / "06-Wiki").glob("*.md")) if (vault_dir / "06-Wiki").exists() else []
+            wiki_dirs = [vault_dir / "06-Wiki", vault_dir / "05 - Knowledge Base" / "Karpathy LLM Wiki"]
+            wiki_files = []
+            seen_wiki = set()
+            for wd in wiki_dirs:
+                if wd.exists():
+                    for wp in wd.glob("*.md"):
+                        if wp.is_file() and not wp.name.startswith(".") and wp.name not in seen_wiki:
+                            seen_wiki.add(wp.name)
+                            wiki_files.append(wp)
             conn_pct = round((connected_notes / len(notes) * 100) if notes else 100.0, 1)
             score = 100
             if len(canvases) != canvas_valid:
@@ -1392,11 +1413,12 @@ health_score: 100
                         if p.stem.startswith("MOC") or p.stem == "00 Home":
                             mocs.append(p.stem)
 
-            wiki_dir = vault_dir / "06-Wiki"
-            if wiki_dir.exists():
-                for wp in sorted(wiki_dir.glob("*.md")):
-                    if wp.is_file() and not wp.name.startswith("."):
-                        wiki_articles.append(wp.name)
+            wiki_dirs = [vault_dir / "06-Wiki", vault_dir / "05 - Knowledge Base" / "Karpathy LLM Wiki"]
+            for wd in wiki_dirs:
+                if wd.exists():
+                    for wp in sorted(wd.glob("*.md")):
+                        if wp.is_file() and not wp.name.startswith(".") and wp.name not in wiki_articles:
+                            wiki_articles.append(wp.name)
 
             self._send_json({
                 "ok": True,
@@ -1615,7 +1637,7 @@ health_score: 100
                     parts = p.relative_to(vault_dir).parts
                     if len(parts) > 1:
                         cl = parts[0]
-                        if cl == "06-Wiki": cl = "Wiki"
+                        if cl == "06-Wiki" or (len(parts) > 2 and parts[0] == "05 - Knowledge Base" and parts[1] == "Karpathy LLM Wiki"): cl = "Wiki"
                         elif cl == "05-Telemetry": cl = "Telemetry"
                         elif cl == "04-Ingested": cl = "Ingested"
                     elif suf == ".canvas":
@@ -1647,7 +1669,7 @@ health_score: 100
                 parts = Path(rel).parts
                 if len(parts) > 1:
                     cl = parts[0]
-                    if cl == "06-Wiki": cl = "Wiki"
+                    if cl == "06-Wiki" or (len(parts) > 2 and parts[0] == "05 - Knowledge Base" and parts[1] == "Karpathy LLM Wiki"): cl = "Wiki"
                     elif cl == "05-Telemetry": cl = "Telemetry"
                     elif cl == "04-Ingested": cl = "Ingested"
                 elif rel.endswith(".canvas"):
@@ -2273,7 +2295,14 @@ health_score: 100
             EVENT_BROADCASTER.broadcast("obsidian_synced", {"ingested": ingested, "vault": str(vault_dir)})
             all_canvases = sorted(p.name for p in vault_dir.glob("*.canvas"))
             all_bases = sorted(p.name for p in vault_dir.glob("*.base"))
-            wiki_articles = sorted(p.name for p in (vault_dir / "06-Wiki").glob("*.md")) if (vault_dir / "06-Wiki").exists() else []
+            wiki_dirs = [vault_dir / "06-Wiki", vault_dir / "05 - Knowledge Base" / "Karpathy LLM Wiki"]
+            wiki_articles = []
+            for wd in wiki_dirs:
+                if wd.exists():
+                    for wp in sorted(wd.glob("*.md")):
+                        if wp.is_file() and not wp.name.startswith(".") and wp.name not in wiki_articles:
+                            wiki_articles.append(wp.name)
+            wiki_articles.sort()
             self._send_json({
                 "ok": True,
                 "status": "synced",
