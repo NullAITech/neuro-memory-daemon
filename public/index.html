@@ -2569,27 +2569,27 @@ curl -X POST http://127.0.0.1:8788/api/recall \
           <div class="obs-audit-grid">
             <div class="obs-audit-card" style="border-left:3px solid #00E5FF;">
               <div class="obs-audit-label">JSON Canvas 1.0</div>
-              <div class="obs-audit-val" id="obs-audit-canvases" style="color:#00E5FF;">14/14 Verified</div>
+              <div class="obs-audit-val" id="obs-audit-canvases" style="color:#00E5FF;">17/17 Verified</div>
             </div>
             <div class="obs-audit-card" style="border-left:3px solid #10B981;">
               <div class="obs-audit-label">Obsidian Bases</div>
-              <div class="obs-audit-val" id="obs-audit-bases" style="color:#10B981;">18/18 Verified</div>
+              <div class="obs-audit-val" id="obs-audit-bases" style="color:#10B981;">19/19 Verified</div>
             </div>
             <div class="obs-audit-card" style="border-left:3px solid #E879F9;">
               <div class="obs-audit-label">Vault Markdown Notes</div>
-              <div class="obs-audit-val" id="obs-audit-notes" style="color:#E879F9;">1,721+ Notes</div>
+              <div class="obs-audit-val" id="obs-audit-notes" style="color:#E879F9;">1,732+ Notes</div>
             </div>
             <div class="obs-audit-card" style="border-left:3px solid #D4AF37;">
               <div class="obs-audit-label">Wikilink Graph Edges</div>
-              <div class="obs-audit-val" id="obs-audit-edges" style="color:#D4AF37;">7,973+ Wikilinks</div>
+              <div class="obs-audit-val" id="obs-audit-edges" style="color:#D4AF37;">8,117+ Wikilinks</div>
             </div>
             <div class="obs-audit-card" style="border-left:3px solid #60A5FA;">
               <div class="obs-audit-label">Graph Connectivity</div>
-              <div class="obs-audit-val" id="obs-audit-connectivity" style="color:#60A5FA;">99.6% Active</div>
+              <div class="obs-audit-val" id="obs-audit-connectivity" style="color:#60A5FA;">100.0% Active</div>
             </div>
             <div class="obs-audit-card" style="border-left:3px solid #F43F5E;">
               <div class="obs-audit-label">Canonical LLM Wiki</div>
-              <div class="obs-audit-val" id="obs-audit-wikis" style="color:#F43F5E;">6 Canonical</div>
+              <div class="obs-audit-val" id="obs-audit-wikis" style="color:#F43F5E;">12 Canonical</div>
             </div>
           </div>
         </div>
@@ -5231,11 +5231,11 @@ curl -X POST http://127.0.0.1:8788/api/recall \
       }
       const statConn = document.getElementById('obs-audit-connectivity');
       if (statConn) {
-        statConn.innerText = `${data.connectivityPct || 99.6}% Active`;
+        statConn.innerText = `${data.connectivityPct !== undefined ? data.connectivityPct : 100.0}% Active`;
       }
       const statWikis = document.getElementById('obs-audit-wikis');
       if (statWikis) {
-        statWikis.innerText = `${data.wikiCount || 6} Canonical`;
+        statWikis.innerText = `${data.wikiCount || 12} Canonical`;
       }
     }
 

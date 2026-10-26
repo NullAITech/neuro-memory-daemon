@@ -337,14 +337,26 @@ class MemoryDaemon:
             # Form initial synaptic connections based on associative similarity & recent temporal context
             synapses: Dict[str, float] = {}
             candidates = []
+            tags_set = set(tags_list)
+            emb_items = list(embedding.items()) if embedding else []
+            emb_len = len(embedding)
+
             for other_id, other_node in self.nodes.items():
-                sim = _cosine_similarity(embedding, other_node.embedding)
-                
+                other_emb = other_node.embedding
+                if not other_emb or not emb_len:
+                    sim = 0.0
+                else:
+                    if emb_len <= len(other_emb):
+                        dot = sum(v * other_emb[k] for k, v in emb_items if k in other_emb)
+                    else:
+                        dot = sum(v * embedding[k] for k, v in other_emb.items() if k in embedding)
+                    sim = max(0.0, min(1.0, dot))
+
                 # Tag intersection bonus
-                shared_tags = set(tags_list) & set(other_node.tags)
-                if shared_tags:
-                    sim += 0.15 * len(shared_tags)
-                sim = min(1.0, sim)
+                if tags_set and other_node.tags:
+                    shared_count = sum(1 for t in other_node.tags if t in tags_set)
+                    if shared_count:
+                        sim = min(1.0, sim + 0.15 * shared_count)
 
                 if sim >= 0.25:
                     candidates.append((other_id, sim, other_node))
@@ -423,6 +435,7 @@ class MemoryDaemon:
 
             # 1. Direct associative resonance
             activation_scores: Dict[str, float] = {}
+            query_tokens = set(_tokenize(query))
             for node_id, node in self.nodes.items():
                 if category and node.category != category:
                     continue
@@ -430,10 +443,10 @@ class MemoryDaemon:
                 sim = _cosine_similarity(query_vec, node.embedding)
                 
                 # Tag cue match boost
-                query_tokens = set(_tokenize(query))
-                matching_tags = query_tokens & set(node.tags)
-                if matching_tags:
-                    sim += 0.25 * len(matching_tags)
+                if query_tokens and node.tags:
+                    matching_count = sum(1 for t in node.tags if t in query_tokens)
+                    if matching_count:
+                        sim += 0.25 * matching_count
 
                 # Importance weighting factor
                 score = (sim * 0.7) + (node.importance * 0.3)

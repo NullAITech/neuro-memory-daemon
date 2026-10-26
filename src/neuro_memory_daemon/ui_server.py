@@ -2203,13 +2203,30 @@ health_score: 100
             vault_dir = Path.home() / "Documents" / "Obsidian Vault"
             vault_dir.mkdir(parents=True, exist_ok=True)
             ingested = 0
-            existing_texts = {node.text for node in daemon.nodes.values() if "[Obsidian Second Brain" in node.text}
+            existing_second_brain_nodes = {}
+            for node in daemon.nodes.values():
+                if "[Obsidian Second Brain · [[" in node.text:
+                    start = node.text.find("[[") + 2
+                    end = node.text.find("]]", start)
+                    if start > 1 and end > start:
+                        existing_second_brain_nodes[node.text[start:end]] = node
+                elif "[Obsidian Second Brain · Spec Artifact " in node.text:
+                    start = len("[Obsidian Second Brain · Spec Artifact ")
+                    end = node.text.find("]", start)
+                    if end > start:
+                        existing_second_brain_nodes[node.text[start:end]] = node
+
             for moc_name in ("00 Home.md", "Zoth Memory.md", "Zoth Studio.md", "Zoth OS.md", "Vaelor Network.md", "MOC Skills.md", "MOC Daemons.md", "Zoth Trust & Supply Chain.md"):
                 moc_file = vault_dir / moc_name
                 if moc_file.exists():
                     snippet = safe_read_text(moc_file)[:280].replace("\n", " ").strip()
                     mem_text = f"[Obsidian Second Brain · [[{moc_file.stem}]]] {snippet}"
-                    if mem_text not in existing_texts:
+                    if moc_file.stem in existing_second_brain_nodes:
+                        existing_node = existing_second_brain_nodes[moc_file.stem]
+                        existing_node.text = mem_text
+                        existing_node.updated_at = time.time()
+                        existing_node.last_accessed_at = time.time()
+                    else:
                         daemon.store(
                             text=mem_text,
                             tags=["obsidian", "second-brain", "moc", moc_file.stem.lower().replace(" ", "-")],
@@ -2217,7 +2234,6 @@ health_score: 100
                             category="semantic",
                             agent_id="obsidian-bridge",
                         )
-                        existing_texts.add(mem_text)
                     ingested += 1
             for artifact_name in (
                 "Vaelor Layer-1 Complete Architecture.canvas",
@@ -2231,13 +2247,19 @@ health_score: 100
                 "Zoth Fleet & Daemons.base",
                 "Zoth 71 Sovereign Tools.base",
                 "Zoth Autonomous Agents.base",
-                "Zoth LLM Wiki Index.base"
+                "Zoth LLM Wiki Index.base",
+                "Vaelor Ecosystem & Patronage Ledger.base",
             ):
                 art_file = vault_dir / artifact_name
                 if art_file.exists():
                     snippet = safe_read_text(art_file)[:280].replace("\n", " ").strip()
                     mem_text = f"[Obsidian Second Brain · Spec Artifact {art_file.name}] {snippet}"
-                    if mem_text not in existing_texts:
+                    if art_file.name in existing_second_brain_nodes:
+                        existing_node = existing_second_brain_nodes[art_file.name]
+                        existing_node.text = mem_text
+                        existing_node.updated_at = time.time()
+                        existing_node.last_accessed_at = time.time()
+                    else:
                         daemon.store(
                             text=mem_text,
                             tags=["obsidian", "second-brain", "canvas" if art_file.suffix == ".canvas" else "base", art_file.stem.lower().replace(" ", "-")],
@@ -2245,7 +2267,6 @@ health_score: 100
                             category="procedural",
                             agent_id="obsidian-bridge",
                         )
-                        existing_texts.add(mem_text)
                     ingested += 1
             EVENT_BROADCASTER.broadcast("obsidian_synced", {"ingested": ingested, "vault": str(vault_dir)})
             all_canvases = sorted(p.name for p in vault_dir.glob("*.canvas"))
