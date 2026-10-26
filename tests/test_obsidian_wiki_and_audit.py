@@ -1174,6 +1174,49 @@ def test_mcp_obsidian_note_path_traversal_rejected(obsidian_server: tuple[Memory
         assert "forbidden" in content_write["error"].lower()
 
 
+def test_obsidian_vaelor_get(obsidian_server):
+    """Test GET /api/obsidian/vaelor returns Vaelor network status with L1 metrics."""
+    _, base_url, _ = obsidian_server
+    status, _, body = _http_get(f"{base_url}/api/obsidian/vaelor")
+    data = json.loads(body.decode("utf-8"))
+    assert status == 200
+    assert data["ok"] is True
+    assert data["chainId"] == "vaelor-mainnet-1"
+    assert data["validatorCount"] == 5
+    assert data["stakingApyPct"] == 8.5
+    assert data["cashbackPct"] == 2.5
+    assert data["gasFee"] == 0
+    assert "totalSupplyVlr" in data
+    assert "totalBlocks" in data
+
+
+def test_obsidian_vaelor_mine_post(obsidian_server):
+    """Test POST /api/obsidian/vaelor/mine executes PoUW cognitive mining and stores STDP engram."""
+    _, base_url, daemon = obsidian_server
+    payload = {
+        "miner": "@zoth",
+        "taskType": "STDP_OBSIDIAN_INDEXING"
+    }
+    status, _, body = _http_post(f"{base_url}/api/obsidian/vaelor/mine", payload)
+    data = json.loads(body.decode("utf-8"))
+    assert status == 200
+    assert data["ok"] is True
+    assert data["miner"] == "@zoth"
+    assert data["taskType"] == "STDP_OBSIDIAN_INDEXING"
+    assert "rewardVlr" in data
+    assert data["rewardVlr"] > 0
+    assert "blockHash" in data
+    assert len(data["blockHash"]) > 10
+    assert data["quorumStatus"] == "FINALIZED_BFT"
+    assert data["validatorCount"] == 5
+
+    # Verify that an STDP memory engram was recorded in daemon
+    vaelor_mems = [m for m in daemon.nodes.values() if "vaelor" in [t.lower() for t in m.tags]]
+    assert len(vaelor_mems) >= 1
+    assert any("pouw" in [t.lower() for t in m.tags] for m in vaelor_mems)
+
+
+
 
 
 

@@ -3420,6 +3420,58 @@ curl -X POST http://127.0.0.1:8788/api/recall \
           </div>
         </div>
 
+        <!-- Vaelor (◈ VLR) Layer-1 & PoUW Cognitive Mining Bridge -->
+        <div id="obsidian-vaelor-pouw-bridge" style="background:linear-gradient(135deg, rgba(15,15,24,0.95) 0%, rgba(20,20,38,0.95) 100%); border:1px solid rgba(212,175,55,0.3); border-radius:14px; padding:18px 20px; margin-top:16px; box-shadow:0 8px 32px rgba(0,0,0,0.45); position:relative; overflow:hidden;">
+          <div style="position:absolute; top:-30px; right:-30px; width:120px; height:120px; background:radial-gradient(circle, rgba(212,175,55,0.15) 0%, transparent 70%); pointer-events:none;"></div>
+          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="font-size:24px; color:#D4AF37; text-shadow:0 0 12px rgba(212,175,55,0.6);">◈</span>
+              <div>
+                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                  <span style="font-size:14px; font-weight:700; letter-spacing:0.6px; text-transform:uppercase; color:#D4AF37;">Vaelor (◈ VLR) Layer-1 &amp; PoUW Cognitive Mining Bridge</span>
+                  <span id="vaelor-status-badge" style="font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.4); color:#34D399; font-family:var(--font-mono);">ONLINE :8140</span>
+                </div>
+                <div style="font-size:11.5px; color:#94A3B8; margin-top:2px;">Decentralized Proof-of-Useful-Work (PoUW) Cognitive Ledger &amp; STDP Memory Settlement on Vaelor L1</div>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <button class="btn btn-outlined" id="btn-obsidian-vaelor-refresh" onclick="fetchVaelorBridgeStatus(true)" style="padding:6px 12px; font-size:11.5px; border-color:rgba(212,175,55,0.4); color:#D4AF37; cursor:pointer;" title="Refresh Vaelor L1 Telemetry">
+                🔄 Refresh Bridge
+              </button>
+              <button class="btn btn-primary" id="btn-obsidian-vaelor-mine" onclick="mineVaelorPoUWBlock()" style="padding:6px 14px; font-size:11.5px; font-weight:700; background:linear-gradient(135deg, #D4AF37 0%, #B8860B 100%); color:#000; border:none; border-radius:6px; cursor:pointer; box-shadow:0 2px 10px rgba(212,175,55,0.3); display:inline-flex; align-items:center; gap:6px;">
+                ⚡ Mine PoUW Cognitive Block (+◈ VLR)
+              </button>
+            </div>
+          </div>
+
+          <!-- 5 Telemetry Pills -->
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px; margin-bottom:12px;">
+            <div style="background:#0B0B14; border:1px solid rgba(212,175,55,0.25); border-radius:8px; padding:10px 12px;">
+              <div style="font-size:10px; text-transform:uppercase; letter-spacing:0.5px; color:#D4AF37; margin-bottom:4px; font-weight:600;">◈ Total Supply</div>
+              <div id="vaelor-supply-pill" style="font-size:13px; font-weight:700; color:#FBBF24; font-family:var(--font-mono);">191,265.08 VLR</div>
+            </div>
+            <div style="background:#0B0B14; border:1px solid rgba(0,229,255,0.25); border-radius:8px; padding:10px 12px;">
+              <div style="font-size:10px; text-transform:uppercase; letter-spacing:0.5px; color:#00E5FF; margin-bottom:4px; font-weight:600;">Blocks Minted</div>
+              <div id="vaelor-blocks-pill" style="font-size:13px; font-weight:700; color:#38BDF8; font-family:var(--font-mono);">120 Blocks</div>
+            </div>
+            <div style="background:#0B0B14; border:1px solid rgba(16,185,129,0.25); border-radius:8px; padding:10px 12px;">
+              <div style="font-size:10px; text-transform:uppercase; letter-spacing:0.5px; color:#10B981; margin-bottom:4px; font-weight:600;">BFT Quorum</div>
+              <div id="vaelor-quorum-pill" style="font-size:13px; font-weight:700; color:#34D399; font-family:var(--font-mono);">5/5 Validators</div>
+            </div>
+            <div style="background:#0B0B14; border:1px solid rgba(232,121,249,0.25); border-radius:8px; padding:10px 12px;">
+              <div style="font-size:10px; text-transform:uppercase; letter-spacing:0.5px; color:#E879F9; margin-bottom:4px; font-weight:600;">Staking / Yield</div>
+              <div id="vaelor-apy-pill" style="font-size:13px; font-weight:700; color:#F472B6; font-family:var(--font-mono);">8.5% APY • 2.5% Back</div>
+            </div>
+            <div style="background:#0B0B14; border:1px solid rgba(99,102,241,0.25); border-radius:8px; padding:10px 12px;">
+              <div style="font-size:10px; text-transform:uppercase; letter-spacing:0.5px; color:#818CF8; margin-bottom:4px; font-weight:600;">Gas / Fee</div>
+              <div id="vaelor-gas-pill" style="font-size:13px; font-weight:700; color:#A5B4FC; font-family:var(--font-mono);">0 Gwei (Zero Gas)</div>
+            </div>
+          </div>
+
+          <!-- Mine Result Card -->
+          <div id="obsidian-vaelor-mine-result" style="display:none; background:#080810; border:1px solid rgba(212,175,55,0.4); border-radius:8px; padding:12px 14px; font-size:12px; font-family:var(--font-mono); color:#E2E8F0; margin-top:8px;"></div>
+        </div>
+
         <!-- Maps of Content (MOCs) Notes Inspector -->
         <div style="margin-top:16px;">
           <div style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:0.6px; color:#00E5FF; margin-bottom:10px;">
@@ -3627,6 +3679,7 @@ curl -X POST http://127.0.0.1:8788/api/recall \
       }
       if (tabId === 'obsidian') {
         fetchObsidianVault();
+        fetchVaelorBridgeStatus();
       }
     }
 
@@ -5132,6 +5185,7 @@ curl -X POST http://127.0.0.1:8788/api/recall \
         fetchObsidianVaultFiles(),
         fetchMcpTools(),
         fetchObsidianDaily(),
+        fetchVaelorBridgeStatus(),
         inspectObsidianBacklinks('00 Home'),
         loadOfmNote('00 Home.md')
       ]);
@@ -6988,6 +7042,123 @@ curl -X POST http://127.0.0.1:8788/api/recall \
       } catch (e) {}
       showToast('💎 Obsidian Vault synchronized with 3D Nebula!', 'success');
     }
+
+    // ---------------------------------------------------------
+    // Vaelor (◈ VLR) L1 & PoUW Cognitive Mining Bridge Handlers
+    // ---------------------------------------------------------
+    async function fetchVaelorBridgeStatus(interactive = false) {
+      try {
+        const res = await fetch(`${API_BASE}/api/obsidian/vaelor`);
+        if (res.ok) {
+          const data = await res.json();
+          const supplyEl = document.getElementById('vaelor-supply-pill');
+          if (supplyEl) {
+            const num = Number(data.totalSupplyVlr || 191265.08);
+            supplyEl.innerText = `${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} VLR`;
+          }
+          const blocksEl = document.getElementById('vaelor-blocks-pill');
+          if (blocksEl) {
+            blocksEl.innerText = `${data.totalBlocks || 120} Blocks`;
+          }
+          const quorumEl = document.getElementById('vaelor-quorum-pill');
+          if (quorumEl) {
+            quorumEl.innerText = `${data.validatorCount || 5}/${data.validatorCount || 5} Validators (BFT)`;
+          }
+          const apyEl = document.getElementById('vaelor-apy-pill');
+          if (apyEl) {
+            apyEl.innerText = `${data.stakingApyPct || 8.5}% APY • ${data.cashbackPct || 2.5}% Back`;
+          }
+          const gasEl = document.getElementById('vaelor-gas-pill');
+          if (gasEl) {
+            gasEl.innerText = `${data.gasFee ?? 0} Gwei (Zero Gas)`;
+          }
+          const badgeEl = document.getElementById('vaelor-status-badge');
+          if (badgeEl) {
+            if (data.status === 'ONLINE') {
+              badgeEl.innerText = 'ONLINE :8140';
+              badgeEl.style.color = '#34D399';
+              badgeEl.style.background = 'rgba(16,185,129,0.15)';
+              badgeEl.style.borderColor = 'rgba(16,185,129,0.4)';
+            } else {
+              badgeEl.innerText = 'FALLBACK CACHED';
+              badgeEl.style.color = '#FBBF24';
+              badgeEl.style.background = 'rgba(245,158,11,0.15)';
+              badgeEl.style.borderColor = 'rgba(245,158,11,0.4)';
+            }
+          }
+          if (interactive) {
+            showToast(`◈ Vaelor L1 Bridge Synced: ${data.totalBlocks || 120} Blocks • ${Number(data.totalSupplyVlr || 0).toFixed(2)} VLR`, 'success');
+          }
+          return data;
+        }
+      } catch (err) {
+        console.warn('Vaelor bridge fetch error:', err);
+      }
+      return null;
+    }
+
+    async function mineVaelorPoUWBlock() {
+      const mineBtn = document.getElementById('btn-obsidian-vaelor-mine');
+      const resultBox = document.getElementById('obsidian-vaelor-mine-result');
+      const origText = mineBtn ? mineBtn.innerHTML : '';
+      if (mineBtn) {
+        mineBtn.disabled = true;
+        mineBtn.innerHTML = '⚡ Mining Cognitive Block...';
+      }
+      try {
+        const payload = {
+          miner: '@zoth',
+          taskType: 'STDP_OBSIDIAN_INDEXING',
+          taskLabel: 'PoUW STDP Vector Indexing'
+        };
+        const res = await fetch(`${API_BASE}/api/obsidian/vaelor/mine`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (resultBox) {
+            resultBox.style.display = 'block';
+            const shortHash = data.blockHash ? `${data.blockHash.slice(0, 18)}...${data.blockHash.slice(-8)}` : '0x...';
+            const engramTag = data.engramId ? `<span style="color:#00E5FF;">#${data.engramId.slice(0, 16)}</span>` : '<span style="color:#A78BFA;">STDP Anchored</span>';
+            resultBox.innerHTML = `
+              <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:8px; border-bottom:1px solid rgba(212,175,55,0.25); padding-bottom:6px;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <span style="color:#D4AF37; font-size:14px; font-weight:700;">⚡ PoUW Block Minted Successfully</span>
+                  <span style="font-size:9.5px; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.3); color:#34D399; padding:1px 6px; border-radius:4px; font-weight:600;">5/5 BFT QUORUM</span>
+                </div>
+                <span style="color:#FBBF24; font-weight:700; font-size:13px;">+${data.rewardVlr} ◈ VLR REWARD</span>
+              </div>
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:6px; font-size:11px; line-height:1.5;">
+                <div><span style="color:#94A3B8;">Block Hash:</span> <code style="color:#FBBF24;">${shortHash}</code></div>
+                <div><span style="color:#94A3B8;">Miner:</span> <span style="color:#E2E8F0; font-weight:600;">${data.miner}</span></div>
+                <div><span style="color:#94A3B8;">Cognitive Task:</span> <span style="color:#38BDF8;">${data.taskType}</span></div>
+                <div><span style="color:#94A3B8;">Consensus:</span> <span style="color:#34D399;">${data.quorumStatus} (5/5)</span></div>
+                <div><span style="color:#94A3B8;">STDP Engram:</span> ${engramTag}</div>
+                <div><span style="color:#94A3B8;">Block Height:</span> <span style="color:#E2E8F0;">#${data.blockHeight || 121}</span></div>
+              </div>
+            `;
+          }
+          showToast(`⚡ Minted PoUW Cognitive Block +${data.rewardVlr} ◈ VLR (5/5 BFT Consensus)`, 'success');
+          await fetchVaelorBridgeStatus(false);
+          if (typeof fetchMemories === 'function') fetchMemories();
+        } else {
+          showToast('Failed to mine PoUW block', 'error');
+        }
+      } catch (err) {
+        console.error('PoUW mine error:', err);
+        showToast('Error communicating with Vaelor PoUW bridge', 'error');
+      } finally {
+        if (mineBtn) {
+          mineBtn.disabled = false;
+          mineBtn.innerHTML = origText || '⚡ Mine PoUW Cognitive Block (+◈ VLR)';
+        }
+      }
+    }
+
+    window.fetchVaelorBridgeStatus = fetchVaelorBridgeStatus;
+    window.mineVaelorPoUWBlock = mineVaelorPoUWBlock;
 
     // ---------------------------------------------------------
     // Sovereign Pro Licensing & Monetization Architecture
