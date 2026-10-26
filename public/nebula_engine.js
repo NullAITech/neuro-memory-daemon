@@ -128,6 +128,12 @@
     return sprite;
   }
 
+  // HTML escaping utility for safe HUD text injection
+  function escapeHtml(str) {
+    if (typeof str !== 'string') return String(str || '');
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
   // Pure Web Audio API Synthesizer for Bio-Resonant Synaptic Feedback (Zero Files/CDNs)
   class BioAudioSynthesizer {
     constructor() {
@@ -193,6 +199,28 @@
       } catch (e) {}
     }
 
+    playHarmonicChord(baseFreq = 528) {
+      if (!this.enabled) return;
+      try {
+        this.ensureContext();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const freqs = [baseFreq, baseFreq * 1.25, baseFreq * 1.5];
+        freqs.forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.04);
+          gain.gain.setValueAtTime(0.04, now + idx * 0.04);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.04 + 0.6);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now + idx * 0.04);
+          osc.stop(now + idx * 0.04 + 0.65);
+        });
+      } catch (e) {}
+    }
+
     toggle() {
       this.enabled = !this.enabled;
       if (this.enabled) this.ensureContext();
@@ -224,11 +252,109 @@
       this.cameraTarget = new THREE.Vector3(0, 0, 0);
       this.cameraLookAt = new THREE.Vector3(0, 0, 0);
       this.isGlidingCamera = false;
+      this.glideDuration = 1.4;
       this.glideStartTime = 0;
       this.glideStartPos = new THREE.Vector3();
       this.glideEndPos = new THREE.Vector3();
       this.glideStartLook = new THREE.Vector3();
       this.glideEndLook = new THREE.Vector3();
+
+      this.isTouring = false;
+      this.tourStep = 0;
+      this.tourTimer = null;
+      this.pathwayBannerTimer = null;
+      this.activePathway = null;
+
+      this.tourStops = [
+        {
+          id: 'agents',
+          name: 'Agents Galaxy',
+          icon: '◈',
+          hex: '#D4AF37',
+          color: 0xD4AF37,
+          camPos: new THREE.Vector3(-160, 95, 60),
+          lookAt: new THREE.Vector3(-220, 60, -80),
+          narration: 'Autonomous LLM cognitive runtimes: Antigravity, Grok, Claude, Hermes, and Sentinel. Orchestrates multi-agent memory synthesis and sovereign epistemic consensus.',
+          telemetry: 'Plasticity: 3-Factor STDP • Synaptic Potentiation: Active',
+        },
+        {
+          id: 'tools',
+          name: 'Tools Galaxy',
+          icon: '⚙️',
+          hex: '#00E5FF',
+          color: 0x00E5FF,
+          camPos: new THREE.Vector3(270, 115, 45),
+          lookAt: new THREE.Vector3(220, 80, -100),
+          narration: 'Procedural memory substrate & tool procedures: Bash CLI, AST parsing, math synthesis, and automated code analysis routines.',
+          telemetry: 'Procedural Cache: Zero-Latency • Hot Synapses: Online',
+        },
+        {
+          id: 'security',
+          name: 'Security Galaxy',
+          icon: '❖',
+          hex: '#FF3366',
+          color: 0xFF3366,
+          camPos: new THREE.Vector3(230, -90, 280),
+          lookAt: new THREE.Vector3(180, -120, 140),
+          narration: 'Cryptographic memory boundaries, zero-egress sandboxes, entropy monitors, credential scrubbing, and adversarial guardrail engrams.',
+          telemetry: 'Memory Isolation: Enforced • Leak Protection: 100%',
+        },
+        {
+          id: 'system',
+          name: 'System Galaxy',
+          icon: '▣',
+          hex: '#A855F7',
+          color: 0xA855F7,
+          camPos: new THREE.Vector3(-135, -95, 240),
+          lookAt: new THREE.Vector3(-180, -130, 100),
+          narration: 'ZothOS Substrate Engine: SQLite WAL persistence, process hierarchies, hardware thermals (<60°C target), and kernel telemetry.',
+          telemetry: 'Storage: SQLite WAL • Substrate Status: Pristine',
+        },
+        {
+          id: 'living_minds',
+          name: 'Living Minds Galaxy',
+          icon: '◈',
+          hex: '#10B981',
+          color: 0x10B981,
+          camPos: new THREE.Vector3(45, 195, 220),
+          lookAt: new THREE.Vector3(0, 160, 80),
+          narration: 'Civilization colonies, epistemic self-reflections, emergent dialogues, and autonomous cognitive evolution over deep time.',
+          telemetry: 'Cognitive Emergence: High • Colony Cohesion: 98.4%',
+        },
+        {
+          id: 'obsidian',
+          name: 'Obsidian Second Brain',
+          icon: '💎',
+          hex: '#E879F9',
+          color: 0xE879F9,
+          camPos: new THREE.Vector3(45, -115, 300),
+          lookAt: new THREE.Vector3(0, -145, 165),
+          narration: 'Bidirectional Obsidian vault sync, JSON Canvas (.canvas), Obsidian Bases (.base), wikilinks, and sovereign MOC knowledge graphs.',
+          telemetry: 'Second Brain Sync: Live • Vault Engrams: Bidirectional',
+        },
+        {
+          id: 'core',
+          name: 'Netrunner Cyber-Cortex',
+          icon: '⚡',
+          hex: '#00E5FF',
+          color: 0x00E5FF,
+          camPos: new THREE.Vector3(0, 35, 145),
+          lookAt: new THREE.Vector3(0, -10, 0),
+          narration: 'Central 3-Factor STDP Neural Cortex, articulated cybernetic spine, and global Hippocampal Sharp-Wave Ripple (SWR) generator.',
+          telemetry: 'Frequency: 1.2–8.0 Hz • Plasticity: 3-Factor STDP',
+        },
+        {
+          id: 'all',
+          name: 'Panoramic Cosmic Universe',
+          icon: '✦',
+          hex: '#D4AF37',
+          color: 0xD4AF37,
+          camPos: new THREE.Vector3(0, 180, 520),
+          lookAt: new THREE.Vector3(0, 0, 0),
+          narration: 'Panoramic view of the complete 6-galaxy neural universe, curved Bezier synaptic filaments, and stardust cosmic halo.',
+          telemetry: 'Total Universe Engaged • STDP Plasticity: Synchronized',
+        },
+      ];
 
       this.clock = new THREE.Clock();
       this.hoveredNode = null;
@@ -775,6 +901,29 @@
       this.plasmaPulses.push(pulse);
     }
 
+    // High-speed one-shot plasma burst traveling along a synaptic pathway
+    spawnPathwayBurst(curve, color = 0xFFD700, speedMultiplier = 2.4) {
+      const pulseGeo = new THREE.SphereGeometry(2.2, 16, 16);
+      const pulseMat = new THREE.MeshBasicMaterial({
+        color: color,
+        transparent: true,
+        opacity: 0.95,
+        blending: THREE.AdditiveBlending,
+      });
+      const mesh = new THREE.Mesh(pulseGeo, pulseMat);
+      mesh.scale.set(1.6, 1.6, 1.6);
+
+      const pulse = {
+        curve,
+        mesh,
+        t: 0.0,
+        speed: 0.36 * speedMultiplier,
+        isOneShot: true,
+      };
+      this.scene.add(mesh);
+      this.plasmaPulses.push(pulse);
+    }
+
     // Trigger explosive action potential cascade across the neural network
     triggerCascade(cascadeData) {
       if (!cascadeData) return;
@@ -935,6 +1084,7 @@
     }
 
     clearHighlights() {
+      this.activePathway = null;
       this.filamentCurves.forEach(item => {
         const weight = item.weight || 0.2;
         if (weight >= 0.6) {
@@ -954,6 +1104,9 @@
           mesh.material.emissiveIntensity = 0.55;
         }
       });
+
+      const pathBanner = document.getElementById('nebula-pathway-banner');
+      if (pathBanner) pathBanner.classList.remove('visible');
     }
 
     // Hippocampal Sleep Replay (Sharp-Wave Ripples & Consolidation Simulation)
@@ -1074,7 +1227,10 @@
       }, 4800);
     }
 
-    focusGalaxy(galaxyId) {
+    focusGalaxy(galaxyId, fromTour = false) {
+      if (this.isTouring && !fromTour) {
+        this.stopTour();
+      }
       if (galaxyId === 'core' || galaxyId === 'netrunner') {
         this.clearHighlights();
         this.fireShockwave(new THREE.Vector3(0, 0, 0), 0x00E5FF, 2.4);
@@ -1100,12 +1256,13 @@
       this.glideCameraTo(targetPos, galaxy.center);
     }
 
-    glideCameraTo(endPos, endLook) {
+    glideCameraTo(endPos, endLook, duration = 1.4) {
       this.glideStartPos.copy(this.camera.position);
       this.glideEndPos.copy(endPos);
       this.glideStartLook.copy(this.controls ? this.controls.target : new THREE.Vector3());
       this.glideEndLook.copy(endLook);
       this.glideStartTime = this.clock.getElapsedTime();
+      this.glideDuration = duration;
       this.isGlidingCamera = true;
       if (this.controls) this.controls.autoRotate = false;
     }
@@ -1201,6 +1358,17 @@
           }
           return;
         }
+
+        // Interactive Shift+Click: Trace synaptic pathway between selectedNode and clicked node
+        if (event && event.shiftKey && this.selectedNode && this.hoveredNode && this.selectedNode !== this.hoveredNode) {
+          const sId = this.selectedNode.userData?.nodeData?.id;
+          const tId = this.hoveredNode.userData?.nodeData?.id;
+          if (sId && tId) {
+            this.tracePathway(sId, tId);
+            return;
+          }
+        }
+
         const nodeData = this.hoveredNode.userData.nodeData;
         this.focusNode(nodeData.id);
 
@@ -1261,6 +1429,520 @@
       if (freqEl) freqEl.innerText = `${this.stats.actionFrequency.toFixed(1)} Hz`;
     }
 
+    // Multi-hop shortest synaptic pathway tracer across 3D Bezier filaments
+    tracePathway(sourceId, targetId) {
+      if (this.filamentCurves.length === 0) return null;
+
+      const allNodeIds = Array.from(this.nodeMeshes.keys());
+      if (allNodeIds.length === 0) return null;
+
+      let srcId = sourceId ? String(sourceId) : null;
+      if (!srcId || !this.nodeMeshes.has(srcId)) {
+        srcId = this.selectedNode ? String(this.selectedNode.userData.nodeData.id) : allNodeIds[0];
+      }
+
+      // Build graph adjacency map
+      const adj = new Map();
+      allNodeIds.forEach(id => adj.set(id, []));
+      this.filamentCurves.forEach(item => {
+        const s = String(item.sourceId);
+        const t = String(item.targetId);
+        if (!adj.has(s)) adj.set(s, []);
+        if (!adj.has(t)) adj.set(t, []);
+        adj.get(s).push({ neighbor: t, filament: item, weight: item.weight || 0.2 });
+        adj.get(t).push({ neighbor: s, filament: item, weight: item.weight || 0.2 });
+      });
+
+      // If targetId not specified or same as source, pick optimal cross-galaxy destination
+      let tgtId = targetId ? String(targetId) : null;
+      if (!tgtId || tgtId === srcId || !this.nodeMeshes.has(tgtId)) {
+        const reachable = [];
+        const q = [srcId];
+        const visitedSet = new Set([srcId]);
+        const distMap = new Map([[srcId, 0]]);
+
+        while (q.length > 0) {
+          const u = q.shift();
+          const d = distMap.get(u);
+          const neighbors = adj.get(u) || [];
+          for (const edge of neighbors) {
+            if (!visitedSet.has(edge.neighbor)) {
+              visitedSet.add(edge.neighbor);
+              distMap.set(edge.neighbor, d + 1);
+              q.push(edge.neighbor);
+              reachable.push({ id: edge.neighbor, dist: d + 1 });
+            }
+          }
+        }
+
+        if (reachable.length > 0) {
+          const srcMesh = this.nodeMeshes.get(srcId);
+          const srcGalaxy = srcMesh?.userData?.galaxy?.id || null;
+          const crossGalaxy = reachable.filter(r => {
+            const m = this.nodeMeshes.get(r.id);
+            return m && m.userData?.galaxy && m.userData.galaxy.id !== srcGalaxy;
+          });
+
+          if (crossGalaxy.length > 0) {
+            crossGalaxy.sort((a, b) => {
+              if (b.dist !== a.dist) return b.dist - a.dist;
+              const impA = this.nodeMeshes.get(a.id)?.userData?.nodeData?.importance || 0;
+              const impB = this.nodeMeshes.get(b.id)?.userData?.nodeData?.importance || 0;
+              return impB - impA;
+            });
+            tgtId = crossGalaxy[0].id;
+          } else {
+            reachable.sort((a, b) => b.dist - a.dist);
+            tgtId = reachable[0].id;
+          }
+        }
+      }
+
+      if (!tgtId || !this.nodeMeshes.has(tgtId)) {
+        console.warn('[NebulaEngine] No destination node found for pathway trace');
+        return null;
+      }
+
+      // Shortest Path BFS between srcId and tgtId
+      const queue = [srcId];
+      const visited = new Set([srcId]);
+      const prev = new Map(); // neighborId -> { parentId, filament, weight }
+
+      while (queue.length > 0) {
+        const curr = queue.shift();
+        if (curr === tgtId) break;
+        const neighbors = adj.get(curr) || [];
+        for (const edge of neighbors) {
+          if (!visited.has(edge.neighbor)) {
+            visited.add(edge.neighbor);
+            prev.set(edge.neighbor, { parentId: curr, filament: edge.filament, weight: edge.weight });
+            queue.push(edge.neighbor);
+          }
+        }
+      }
+
+      if (!prev.has(tgtId) && srcId !== tgtId) {
+        this.showPathwayNarration({
+          notFound: true,
+          srcData: this.nodeMeshes.get(srcId)?.userData?.nodeData,
+          tgtData: this.nodeMeshes.get(tgtId)?.userData?.nodeData,
+        });
+        return null;
+      }
+
+      // Reconstruct path
+      const pathNodes = [];
+      const pathFilaments = [];
+      let totalWeight = 0;
+      let curr = tgtId;
+      while (curr !== srcId) {
+        pathNodes.unshift(curr);
+        const info = prev.get(curr);
+        if (!info) break;
+        pathFilaments.unshift(info.filament);
+        totalWeight += (info.weight || 0.2);
+        curr = info.parentId;
+      }
+      pathNodes.unshift(srcId);
+
+      const hops = pathFilaments.length;
+      const avgWeight = hops > 0 ? (totalWeight / hops) : 1.0;
+
+      // Visual Synaptic Highlighting
+      this.clearHighlights();
+      this.activePathway = { nodes: pathNodes, filaments: pathFilaments };
+
+      // Dim non-path filaments
+      const pathFilamentSet = new Set(pathFilaments);
+      this.filamentCurves.forEach(f => {
+        if (pathFilamentSet.has(f)) {
+          f.line.material.opacity = 1.0;
+          f.line.material.color.setHex(0xFFD700);
+        } else {
+          f.line.material.opacity = 0.08;
+        }
+      });
+
+      // Dim non-path nodes, spotlight path nodes
+      const pathNodeSet = new Set(pathNodes);
+      this.nodeMeshes.forEach((mesh, id) => {
+        if (pathNodeSet.has(id)) {
+          mesh.material.emissiveIntensity = 1.6;
+        } else {
+          mesh.material.emissiveIntensity = 0.2;
+        }
+      });
+
+      // Smooth Camera Glide to frame the pathway
+      const pathCenter = new THREE.Vector3();
+      pathNodes.forEach(id => {
+        const m = this.nodeMeshes.get(id);
+        if (m) pathCenter.add(m.position);
+      });
+      pathCenter.divideScalar(pathNodes.length);
+
+      const srcPos = this.nodeMeshes.get(srcId).position;
+      const tgtPos = this.nodeMeshes.get(tgtId).position;
+      const spanDist = srcPos.distanceTo(tgtPos);
+      const camDist = Math.max(160, Math.min(650, spanDist * 1.15));
+
+      const camTarget = new THREE.Vector3(
+        pathCenter.x + 30,
+        pathCenter.y + 40,
+        pathCenter.z + camDist
+      );
+      this.glideCameraTo(camTarget, pathCenter, 1.4);
+
+      // Staggered Traveling Plasma Bursts along each hop
+      const hopDelay = 340;
+      for (let i = 0; i < hops; i++) {
+        const filament = pathFilaments[i];
+        const stepSrcId = pathNodes[i];
+        const stepTgtId = pathNodes[i + 1];
+        const stepSrcMesh = this.nodeMeshes.get(stepSrcId);
+        const stepTgtMesh = this.nodeMeshes.get(stepTgtId);
+
+        setTimeout(() => {
+          if (stepSrcMesh) {
+            this.flashNode(stepSrcMesh, i === 0 ? 0xFFD700 : 0x00E5FF, 2.0);
+            this.fireShockwave(stepSrcMesh.position, i === 0 ? 0xD4AF37 : 0x00E5FF, 1.8);
+          }
+
+          if (this.audio) {
+            const toneFreq = 440 * Math.pow(1.05946, (i * 2) % 12);
+            this.audio.playActionPotential(toneFreq);
+          }
+
+          this.spawnPathwayBurst(filament.curve, 0xFFD700, 2.6);
+          setTimeout(() => {
+            this.spawnPathwayBurst(filament.curve, 0x00E5FF, 2.2);
+          }, 80);
+
+          if (i === hops - 1) {
+            setTimeout(() => {
+              if (stepTgtMesh) {
+                this.flashNode(stepTgtMesh, 0xFFD700, 2.4);
+                this.fireShockwave(stepTgtMesh.position, 0xFFD700, 2.6);
+              }
+              if (this.audio) {
+                this.audio.playActionPotential(880);
+              }
+            }, 300);
+          }
+        }, i * hopDelay);
+      }
+
+      // Live HUD Narration Banner
+      this.showPathwayNarration({
+        pathNodes,
+        hops,
+        avgWeight,
+        srcMesh: this.nodeMeshes.get(srcId),
+        tgtMesh: this.nodeMeshes.get(tgtId),
+      });
+
+      return {
+        path: pathNodes,
+        filaments: pathFilaments,
+        hops,
+        avgWeight,
+      };
+    }
+
+    showPathwayNarration(info) {
+      let banner = document.getElementById('nebula-pathway-banner');
+      if (!banner) return;
+
+      if (info.notFound) {
+        banner.innerHTML = `
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div style="font-size:22px;">⚡</div>
+            <div style="display:flex; flex-direction:column; gap:2px;">
+              <div style="font-weight:700; font-size:12px; color:#FF3366; letter-spacing:0.5px;">NO DIRECT SYNAPTIC PATHWAY FOUND</div>
+              <div style="font-size:11px; color:#EDEFF2;">Engrams belong to disjoint synaptic clusters. Bridging via Netrunner Cyber-Cortex.</div>
+            </div>
+          </div>
+        `;
+        banner.classList.add('visible');
+        setTimeout(() => banner.classList.remove('visible'), 4000);
+        return;
+      }
+
+      const hops = info.hops;
+      const latency = hops * 14;
+      const avgWeight = (info.avgWeight || 0.5).toFixed(2);
+
+      const crumbs = info.pathNodes.map((id) => {
+        const m = this.nodeMeshes.get(id);
+        const name = (m?.userData?.nodeData?.text || m?.userData?.nodeData?.label || id).slice(0, 16);
+        const col = m?.userData?.galaxy?.hex || '#00E5FF';
+        return `<span style="color:${col}; font-weight:600;">${escapeHtml(name)}</span>`;
+      }).join(' <span style="color:#D4AF37;">➔</span> ');
+
+      banner.innerHTML = `
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:18px;">⚡</span>
+            <span style="font-weight:700; font-size:12px; color:#FFD700; text-transform:uppercase; letter-spacing:0.6px;">SYNAPTIC PATHWAY TRACED &bull; ${hops} HOPS</span>
+          </div>
+          <button style="background:transparent; border:none; color:#9AA0A6; cursor:pointer; font-size:14px; padding:0 4px;" onclick="document.getElementById('nebula-pathway-banner').classList.remove('visible')">&times;</button>
+        </div>
+        <div style="font-size:11px; color:#EDEFF2; line-height:1.4; max-height:48px; overflow-y:auto; font-family:var(--font-mono);">${crumbs}</div>
+        <div style="display:flex; align-items:center; justify-content:space-between; font-size:10px; color:#9AA0A6; border-top:1px solid rgba(255,255,255,0.08); padding-top:4px;">
+          <span>Latency: <strong style="color:#00E5FF;">${latency} ms</strong></span>
+          <span>STDP Weight: <strong style="color:#FFD700;">${avgWeight}</strong></span>
+          <span>Plasticity: <strong style="color:#10B981;">3-Factor Active</strong></span>
+        </div>
+      `;
+      banner.classList.add('visible');
+      if (this.pathwayBannerTimer) clearTimeout(this.pathwayBannerTimer);
+      this.pathwayBannerTimer = setTimeout(() => {
+        banner.classList.remove('visible');
+      }, 7000);
+    }
+
+    // Hippocampal CA3/CA1 Auto-Associative Pattern Completion Simulation
+    completePattern(cueNodeId) {
+      const allIds = Array.from(this.nodeMeshes.keys());
+      if (allIds.length === 0) return null;
+
+      let seedId = cueNodeId ? String(cueNodeId) : null;
+      if (!seedId || !this.nodeMeshes.has(seedId)) {
+        seedId = this.selectedNode ? String(this.selectedNode.userData.nodeData.id) : allIds[0];
+      }
+
+      const seedMesh = this.nodeMeshes.get(seedId);
+      if (!seedMesh) return null;
+
+      // 1. CA3 Auto-Associative Recurrent Collaterals Reverberation
+      this.flashNode(seedMesh, 0x00E5FF, 2.4);
+      this.fireShockwave(seedMesh.position, 0x00E5FF, 2.2);
+      if (this.audio) this.audio.playActionPotential(480);
+
+      const recurrentFilaments = this.filamentCurves.filter(
+        f => f.sourceId === seedId || f.targetId === seedId
+      );
+      const completedNodeIds = [seedId];
+
+      recurrentFilaments.forEach((f, idx) => {
+        const neighborId = f.sourceId === seedId ? f.targetId : f.sourceId;
+        completedNodeIds.push(neighborId);
+        const neighborMesh = this.nodeMeshes.get(neighborId);
+
+        setTimeout(() => {
+          if (neighborMesh) {
+            this.flashNode(neighborMesh, 0xFFD700, 1.8);
+            this.fireShockwave(neighborMesh.position, 0xD4AF37, 1.6);
+          }
+          this.spawnPathwayBurst(f.curve, 0xFFD700, 2.2);
+          if (this.audio) this.audio.playActionPotential(540 + idx * 30);
+        }, 120 + idx * 90);
+      });
+
+      // 2. Schaffer Collateral Projection into CA1 & Netrunner Cyber-Cortex Core
+      const schafferDelay = 150 + recurrentFilaments.length * 90;
+      setTimeout(() => {
+        if (this.netrunnerCore && this.netrunnerCore.innerCoreMesh) {
+          this.fireShockwave(new THREE.Vector3(0, 0, 0), 0x00E5FF, 3.0);
+          this.fireShockwave(new THREE.Vector3(0, 0, 0), 0xD4AF37, 2.2);
+          if (this.audio) this.audio.playSleepRipple();
+        }
+      }, schafferDelay);
+
+      // 3. HUD notification
+      let banner = document.getElementById('nebula-pathway-banner');
+      if (banner) {
+        banner.innerHTML = `
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:18px;">🧠</span>
+              <span style="font-weight:700; font-size:12px; color:#00E5FF; text-transform:uppercase; letter-spacing:0.6px;">
+                CA3/CA1 PATTERN COMPLETION ENGAGED
+              </span>
+            </div>
+            <button style="background:transparent; border:none; color:#9AA0A6; cursor:pointer; font-size:14px;" onclick="document.getElementById('nebula-pathway-banner').classList.remove('visible')">&times;</button>
+          </div>
+          <div style="font-size:11px; color:#EDEFF2; line-height:1.4;">
+            Recurrent CA3 collaterals auto-associated ${completedNodeIds.length} memory features from cue engram. Projected via Schaffer collaterals to Netrunner Cortex.
+          </div>
+          <div style="display:flex; align-items:center; justify-content:space-between; font-size:10px; color:#9AA0A6; padding-top:4px; border-top:1px solid rgba(255,255,255,0.08);">
+            <span>Recurrent Density: <strong style="color:#FFD700;">${recurrentFilaments.length} Synapses</strong></span>
+            <span>Schaffer Relay: <strong style="color:#10B981;">Nominal (CA1)</strong></span>
+          </div>
+        `;
+        banner.classList.add('visible');
+        if (this.pathwayBannerTimer) clearTimeout(this.pathwayBannerTimer);
+        this.pathwayBannerTimer = setTimeout(() => {
+          banner.classList.remove('visible');
+        }, 6500);
+      }
+
+      return completedNodeIds;
+    }
+
+    // 3D Camera Orbit Tour Mode across all 6 Galaxies + Netrunner Cyber-Cortex
+    toggleTourMode() {
+      if (this.isTouring) {
+        this.stopTour();
+      } else {
+        this.startTour();
+      }
+    }
+
+    startTour() {
+      this.isTouring = true;
+      this.tourStep = 0;
+      this.updateTourButtonUI(true);
+      this.runTourStep();
+    }
+
+    stopTour() {
+      this.isTouring = false;
+      if (this.tourTimer) {
+        clearTimeout(this.tourTimer);
+        this.tourTimer = null;
+      }
+      this.hideTourNarration();
+      this.updateTourButtonUI(false);
+      const autoRotateEl = document.getElementById('auto-rotate-check');
+      if (this.controls && autoRotateEl) {
+        this.controls.autoRotate = autoRotateEl.checked;
+      }
+    }
+
+    runTourStep() {
+      if (!this.isTouring) return;
+
+      if (this.tourStep >= this.tourStops.length) {
+        this.showTourCompletionBanner();
+        this.stopTour();
+        return;
+      }
+
+      const stop = this.tourStops[this.tourStep];
+
+      // Highlight navigator button in HUD
+      document.querySelectorAll('.galaxy-nav-btn').forEach(btn => btn.classList.remove('active'));
+      const activeBtn = document.getElementById(`gnav-${stop.id}`) || document.getElementById('gnav-all');
+      if (activeBtn) activeBtn.classList.add('active');
+
+      // Clear highlights and glide camera smoothly to this stop
+      this.clearHighlights();
+      this.glideCameraTo(stop.camPos, stop.lookAt, 1.6);
+
+      // Audio & shockwaves
+      if (this.audio) {
+        const tone = 440 + this.tourStep * 55;
+        this.audio.playActionPotential(tone);
+      }
+      this.fireShockwave(stop.lookAt, stop.color, 2.4);
+
+      // Flash local nodes in this cluster
+      if (stop.id !== 'all') {
+        const clusterMeshes = Array.from(this.nodeMeshes.values()).filter(m => {
+          if (stop.id === 'core') return m.userData && m.userData.isNetrunnerCore;
+          return m.userData && m.userData.galaxy && m.userData.galaxy.id === stop.id;
+        });
+        clusterMeshes.slice(0, 10).forEach((mesh, idx) => {
+          setTimeout(() => {
+            this.flashNode(mesh, stop.color, 1.8);
+          }, 300 + idx * 80);
+        });
+      }
+
+      // Display Live HUD Narration Card
+      this.showTourNarration(stop, this.tourStep, this.tourStops.length);
+
+      // Schedule next stop after dwell time (5200ms)
+      this.tourStep++;
+      this.tourTimer = setTimeout(() => {
+        this.runTourStep();
+      }, 5200);
+    }
+
+    showTourNarration(stop, stepIndex, totalSteps) {
+      let banner = document.getElementById('nebula-tour-banner');
+      if (!banner) return;
+
+      let clusterEngrams = 0;
+      if (stop.id === 'all') {
+        clusterEngrams = this.stats.totalEngrams;
+      } else if (stop.id === 'core') {
+        clusterEngrams = 1;
+      } else {
+        clusterEngrams = Array.from(this.nodeMeshes.values()).filter(
+          m => m.userData && m.userData.galaxy && m.userData.galaxy.id === stop.id
+        ).length;
+      }
+
+      banner.innerHTML = `
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:6px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:18px;">${stop.icon}</span>
+            <span style="font-weight:700; font-size:12px; color:${stop.hex}; text-transform:uppercase; letter-spacing:0.8px;">
+              ✦ TOUR [${stepIndex + 1}/${totalSteps}]: ${stop.name}
+            </span>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:10px; color:#9AA0A6; font-family:var(--font-mono);">Engrams: <strong style="color:#EDEFF2;">${clusterEngrams}</strong></span>
+            <button style="background:transparent; border:none; color:#9AA0A6; cursor:pointer; font-size:16px; line-height:1; padding:0 4px;" onclick="window.nebulaApp && window.nebulaApp.stopTour()">&times;</button>
+          </div>
+        </div>
+        <div style="font-size:12px; color:#EDEFF2; line-height:1.4; font-weight:400;">
+          ${stop.narration}
+        </div>
+        <div style="display:flex; align-items:center; justify-content:space-between; font-size:10px; color:#9AA0A6; font-family:var(--font-mono); padding-top:4px;">
+          <span style="color:#00E5FF;">${stop.telemetry}</span>
+          <span style="color:#D4AF37;">Next Stop in 5s &rarr;</span>
+        </div>
+        <div class="tour-progress-bar-wrap">
+          <div class="tour-progress-bar-fill" style="background:${stop.hex};"></div>
+        </div>
+      `;
+      banner.classList.add('visible');
+    }
+
+    hideTourNarration() {
+      const banner = document.getElementById('nebula-tour-banner');
+      if (banner) banner.classList.remove('visible');
+    }
+
+    showTourCompletionBanner() {
+      const banner = document.getElementById('nebula-tour-banner');
+      if (!banner) return;
+      banner.innerHTML = `
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:22px;">✦</span>
+          <div>
+            <div style="font-weight:700; font-size:12px; color:#FFD700; letter-spacing:0.6px;">3D NEURAL GALAXY TOUR COMPLETE</div>
+            <div style="font-size:11px; color:#EDEFF2;">Panoramic Cosmic Substrate engaged. All 6 galaxies and Netrunner Core synchronized.</div>
+          </div>
+        </div>
+      `;
+      banner.classList.add('visible');
+      setTimeout(() => {
+        banner.classList.remove('visible');
+      }, 4500);
+    }
+
+    updateTourButtonUI(isActive) {
+      const btn = document.getElementById('btn-galaxy-tour');
+      if (!btn) return;
+      if (isActive) {
+        btn.innerHTML = '⏹ Stop Galaxy Tour';
+        btn.style.borderColor = '#FF3366';
+        btn.style.color = '#FF809B';
+        btn.style.background = 'rgba(255, 51, 102, 0.18)';
+        btn.title = 'Stop Cinematic 3D Tour';
+      } else {
+        btn.innerHTML = '✦ 3D Galaxy Tour';
+        btn.style.borderColor = '#00E5FF';
+        btn.style.color = '#00E5FF';
+        btn.style.background = 'transparent';
+        btn.title = 'Start Cinematic 3D Tour across all 6 Galaxies & Netrunner Core';
+      }
+    }
+
     animate() {
       requestAnimationFrame(() => this.animate());
 
@@ -1275,7 +1957,8 @@
       // 2. Smooth camera glide
       if (this.isGlidingCamera) {
         const elapsed = time - this.glideStartTime;
-        const progress = Math.min(1.0, elapsed / 1.2); // 1.2s smooth glide
+        const dur = this.glideDuration || 1.4;
+        const progress = Math.min(1.0, elapsed / dur);
         const ease = 0.5 - Math.cos(progress * Math.PI) / 2; // smooth cosine ease
 
         this.camera.position.lerpVectors(this.glideStartPos, this.glideEndPos, ease);
@@ -1328,11 +2011,19 @@
       }
 
       // 5. Plasma Action Potential Pulses along Bezier Filaments
-      for (let i = 0; i < this.plasmaPulses.length; i++) {
+      for (let i = this.plasmaPulses.length - 1; i >= 0; i--) {
         const pulse = this.plasmaPulses[i];
         pulse.t += delta * pulse.speed;
         if (pulse.t >= 1.0) {
-          pulse.t = 0.0;
+          if (pulse.isOneShot) {
+            this.scene.remove(pulse.mesh);
+            if (pulse.mesh.geometry) pulse.mesh.geometry.dispose();
+            if (pulse.mesh.material) pulse.mesh.material.dispose();
+            this.plasmaPulses.splice(i, 1);
+            continue;
+          } else {
+            pulse.t = 0.0;
+          }
         }
         const pos = pulse.curve.getPoint(pulse.t);
         pulse.mesh.position.copy(pos);

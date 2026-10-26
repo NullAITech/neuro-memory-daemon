@@ -610,7 +610,7 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
             vault_dir = Path.home() / "Documents" / "Obsidian Vault"
             vault_dir.mkdir(parents=True, exist_ok=True)
             ingested = 0
-            for moc_name in ("00 Home.md", "Zoth Memory.md", "Zoth Studio.md", "Zoth OS.md", "Vaelor Network.md", "MOC Skills.md"):
+            for moc_name in ("00 Home.md", "Zoth Memory.md", "Zoth Studio.md", "Zoth OS.md", "Vaelor Network.md", "MOC Skills.md", "MOC Daemons.md"):
                 moc_file = vault_dir / moc_name
                 if moc_file.exists():
                     snippet = safe_read_text(moc_file)[:280].replace("\n", " ").strip()
@@ -622,6 +622,18 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
                         agent_id="obsidian-bridge",
                     )
                     ingested += 1
+            for artifact_name in ("Zoth Second Brain.canvas", "Vaelor & Sovereign Economy.canvas", "Zoth Memory Stratum.base", "Zoth Fleet & Daemons.base"):
+                art_file = vault_dir / artifact_name
+                if art_file.exists():
+                    snippet = safe_read_text(art_file)[:280].replace("\n", " ").strip()
+                    daemon.store(
+                        text=f"[Obsidian Second Brain · Spec Artifact {art_file.name}] {snippet}",
+                        tags=["obsidian", "second-brain", "canvas" if art_file.suffix == ".canvas" else "base", art_file.stem.lower().replace(" ", "-")],
+                        importance=0.90,
+                        category="procedural",
+                        agent_id="obsidian-bridge",
+                    )
+                    ingested += 1
             EVENT_BROADCASTER.broadcast("obsidian_synced", {"ingested": ingested, "vault": str(vault_dir)})
             self._send_json({
                 "ok": True,
@@ -629,8 +641,8 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
                 "ingestedFromVault": ingested,
                 "totalMemories": len(daemon.nodes),
                 "vaultPath": str(vault_dir),
-                "canvasFile": "Zoth Second Brain.canvas",
-                "baseFile": "Zoth Memory Stratum.base",
+                "canvases": ["Zoth Second Brain.canvas", "Vaelor & Sovereign Economy.canvas"],
+                "bases": ["Zoth Memory Stratum.base", "Zoth Fleet & Daemons.base"],
             })
             return
 

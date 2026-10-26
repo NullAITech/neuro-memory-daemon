@@ -1252,6 +1252,79 @@
       transform: translateX(-50%) translateY(0);
     }
 
+    /* 3D Tour Narration Banner & Synaptic Pathway Banner */
+    .nebula-tour-banner {
+      position: absolute;
+      top: 56px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-15px);
+      opacity: 0;
+      pointer-events: auto;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      background: linear-gradient(135deg, rgba(11, 11, 18, 0.95), rgba(20, 20, 32, 0.92));
+      border: 1px solid rgba(0, 229, 255, 0.45);
+      border-radius: var(--radius-lg);
+      padding: 12px 20px;
+      color: #EDEFF2;
+      backdrop-filter: blur(18px);
+      z-index: 75;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      box-shadow: 0 8px 32px rgba(0, 229, 255, 0.22), 0 4px 20px rgba(0,0,0,0.85);
+      max-width: 620px;
+      width: 90%;
+    }
+    .nebula-tour-banner.visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .tour-progress-bar-wrap {
+      width: 100%;
+      height: 2px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 3px;
+    }
+    .tour-progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      animation: tourProgressAnim 5.2s linear forwards;
+    }
+    @keyframes tourProgressAnim {
+      from { width: 0%; }
+      to { width: 100%; }
+    }
+
+    .nebula-pathway-banner {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(15px);
+      opacity: 0;
+      pointer-events: auto;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      background: linear-gradient(135deg, rgba(212, 175, 55, 0.22), rgba(11, 11, 18, 0.96));
+      border: 1px solid rgba(212, 175, 55, 0.6);
+      border-radius: var(--radius-lg);
+      padding: 12px 20px;
+      color: #F5E6AB;
+      backdrop-filter: blur(18px);
+      z-index: 75;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      box-shadow: 0 8px 32px rgba(212, 175, 55, 0.25), 0 4px 16px rgba(0,0,0,0.8);
+      max-width: 620px;
+      width: 90%;
+    }
+    .nebula-pathway-banner.visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
     /* Engram Slide-Over / Inspector Modal */
     .engram-inspector-modal {
       position: fixed;
@@ -1648,9 +1721,11 @@
         <div id="nebula-3d-container"></div>
         <canvas id="synapse-canvas" style="display:none;"></canvas>
 
-        <!-- Floating Hover Tooltip & Sleep Replay Banner -->
+        <!-- Floating Hover Tooltip, Sleep Replay Banner, Tour Narration & Pathway Banners -->
         <div id="nebula-hover-tooltip" class="nebula-hover-tooltip"></div>
         <div id="nebula-sleep-banner" class="nebula-sleep-banner"></div>
+        <div id="nebula-tour-banner" class="nebula-tour-banner"></div>
+        <div id="nebula-pathway-banner" class="nebula-pathway-banner"></div>
 
         <!-- 3D HUD Left (Substrate Telemetry) -->
         <div class="nebula-hud-left">
@@ -1667,6 +1742,7 @@
             <input type="checkbox" id="auto-rotate-check" checked onchange="toggleAutoRotate(this.checked)"> Auto-Orbit
           </label>
           <button class="btn-icon" id="btn-audio-toggle" style="width:26px; height:26px; font-size:12px;" onclick="toggleNebulaAudio()" title="Toggle Action Potential Audio">✦</button>
+          <button class="btn btn-outlined" id="btn-galaxy-tour" style="padding:4px 10px; font-size:11px; border-color:#00E5FF; color:#00E5FF; font-weight:600;" onclick="toggleNebulaGalaxyTour()" title="Start Cinematic 3D Tour across all 6 Galaxies & Netrunner Core">✦ 3D Galaxy Tour</button>
           <button class="btn btn-primary" style="padding:4px 10px; font-size:11px; background:linear-gradient(135deg, #F3D56A, #B8860B); color:#08080B; font-weight:700;" onclick="triggerVisualSleepReplay()" title="Run Hippocampal Sleep Replay (SWRs)">✦ Sleep Replay</button>
           <button class="btn btn-outlined" style="padding:4px 10px; font-size:11px;" onclick="resetNebulaView()">Center 3D</button>
           <button class="btn btn-tonal" style="padding:4px 10px; font-size:11px;" onclick="fetchGraphData()">Sync</button>
@@ -3633,6 +3709,33 @@ curl -X POST http://127.0.0.1:8788/api/recall \
       }
     }
 
+    function toggleNebulaGalaxyTour() {
+      switchTab('graph');
+      if (window.nebulaApp) {
+        window.nebulaApp.toggleTourMode();
+      }
+    }
+
+    function tracePathwayFromInspector() {
+      if (!selectedEngramNode || !window.nebulaApp) return;
+      switchTab('graph');
+      window.nebulaApp.tracePathway(selectedEngramNode.id);
+    }
+
+    function completePatternFromInspector() {
+      if (!selectedEngramNode || !window.nebulaApp) return;
+      switchTab('graph');
+      window.nebulaApp.completePattern(selectedEngramNode.id);
+    }
+
+    window.toggleTourMode = toggleNebulaGalaxyTour;
+    window.tracePathway = function(sourceId, targetId) {
+      if (window.nebulaApp) {
+        return window.nebulaApp.tracePathway(sourceId, targetId);
+      }
+      return null;
+    };
+
     async function fireEngramFromInspector() {
       if (!selectedEngramNode) return;
       const memId = selectedEngramNode.id;
@@ -3914,6 +4017,12 @@ curl -X POST http://127.0.0.1:8788/api/recall \
       <div style="display:flex; flex-direction:column; gap:10px; margin-top:14px;">
         <button class="btn-fire-pulse" style="width:100%; justify-content:center;" onclick="fireEngramFromInspector()">
           <span>⚡</span> Fire Action Potential Cascade
+        </button>
+        <button class="btn btn-tonal" style="width:100%; justify-content:center; background:rgba(212,175,55,0.18); color:#FFD700; border:1px solid rgba(212,175,55,0.4);" onclick="tracePathwayFromInspector()">
+          <span>⚡</span> Trace Synaptic Pathway
+        </button>
+        <button class="btn btn-tonal" style="width:100%; justify-content:center; background:rgba(0,229,255,0.12); color:#80F0FF; border:1px solid rgba(0,229,255,0.3);" onclick="completePatternFromInspector()">
+          <span>🧠</span> CA3/CA1 Pattern Completion
         </button>
         <button class="btn btn-tonal" style="width:100%; justify-content:center; background:rgba(0,229,255,0.15); color:#80F0FF; border:1px solid rgba(0,229,255,0.3);" onclick="spotlightCurrentInspectorNode()">
           <span>✦</span> Spotlight in 3D Nebula
