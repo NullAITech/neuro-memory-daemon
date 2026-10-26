@@ -610,7 +610,7 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
             vault_dir = Path.home() / "Documents" / "Obsidian Vault"
             vault_dir.mkdir(parents=True, exist_ok=True)
             ingested = 0
-            for moc_name in ("00 Home.md", "Zoth Memory.md", "Zoth Studio.md", "Zoth OS.md", "Vaelor Network.md", "MOC Skills.md", "MOC Daemons.md"):
+            for moc_name in ("00 Home.md", "Zoth Memory.md", "Zoth Studio.md", "Zoth OS.md", "Vaelor Network.md", "MOC Skills.md", "MOC Daemons.md", "Zoth Trust & Supply Chain.md"):
                 moc_file = vault_dir / moc_name
                 if moc_file.exists():
                     snippet = safe_read_text(moc_file)[:280].replace("\n", " ").strip()
@@ -622,7 +622,7 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
                         agent_id="obsidian-bridge",
                     )
                     ingested += 1
-            for artifact_name in ("Zoth Second Brain.canvas", "Vaelor & Sovereign Economy.canvas", "Zoth Memory Stratum.base", "Zoth Fleet & Daemons.base"):
+            for artifact_name in ("Zoth Second Brain.canvas", "Vaelor & Sovereign Economy.canvas", "Zoth Plugin & Connector Marketplace.canvas", "Zoth Memory Stratum.base", "Zoth Fleet & Daemons.base"):
                 art_file = vault_dir / artifact_name
                 if art_file.exists():
                     snippet = safe_read_text(art_file)[:280].replace("\n", " ").strip()
@@ -641,7 +641,7 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
                 "ingestedFromVault": ingested,
                 "totalMemories": len(daemon.nodes),
                 "vaultPath": str(vault_dir),
-                "canvases": ["Zoth Second Brain.canvas", "Vaelor & Sovereign Economy.canvas"],
+                "canvases": ["Zoth Second Brain.canvas", "Vaelor & Sovereign Economy.canvas", "Zoth Plugin & Connector Marketplace.canvas"],
                 "bases": ["Zoth Memory Stratum.base", "Zoth Fleet & Daemons.base"],
             })
             return
