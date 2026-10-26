@@ -522,14 +522,14 @@ def test_mcp_obsidian_doctor_audit(obsidian_server: tuple[MemoryUIServer, str, M
 
 
 def test_api_mcp_tools_get(obsidian_server: tuple[MemoryUIServer, str, MemoryDaemon]):
-    """Test GET /api/mcp/tools returns list of 20 registered tools."""
+    """Test GET /api/mcp/tools returns list of 21 registered tools."""
     _, base_url, _ = obsidian_server
     status, _, body = _http_get(f"{base_url}/api/mcp/tools")
     assert status == 200
     data = json.loads(body.decode("utf-8"))
     assert data["ok"] is True
-    assert data["count"] == 20
-    assert len(data["tools"]) == 20
+    assert data["count"] == 21
+    assert len(data["tools"]) == 21
     tool_names = [t["name"] for t in data["tools"]]
     assert "obsidian_doctor_audit" in tool_names
     assert "obsidian_vault_search" in tool_names
@@ -540,6 +540,7 @@ def test_api_mcp_tools_get(obsidian_server: tuple[MemoryUIServer, str, MemoryDae
     assert "obsidian_bundle_export" in tool_names
     assert "obsidian_note_read" in tool_names
     assert "obsidian_note_write" in tool_names
+    assert "obsidian_vaelor_pouw" in tool_names
     assert "memory_store" in tool_names
     assert "memory_recall" in tool_names
 
@@ -1214,6 +1215,99 @@ def test_obsidian_vaelor_mine_post(obsidian_server):
     vaelor_mems = [m for m in daemon.nodes.values() if "vaelor" in [t.lower() for t in m.tags]]
     assert len(vaelor_mems) >= 1
     assert any("pouw" in [t.lower() for t in m.tags] for m in vaelor_mems)
+
+
+def test_mcp_obsidian_vaelor_pouw(obsidian_server: tuple[MemoryUIServer, str, MemoryDaemon]):
+    """Test MCP tool obsidian_vaelor_pouw via JSON-RPC, HTTP /api/mcp/call, and HTTP /api/mcp."""
+    _, base_url, daemon = obsidian_server
+    mcp = MCPServer(daemon=daemon)
+    assert "obsidian_vaelor_pouw" in mcp.tools
+
+    # 1. Test status action via MCPServer JSON-RPC
+    req_status = {
+        "jsonrpc": "2.0",
+        "id": 201,
+        "method": "tools/call",
+        "params": {
+            "name": "obsidian_vaelor_pouw",
+            "arguments": {"action": "status"}
+        }
+    }
+    resp_status = mcp.handle_request(req_status)
+    assert resp_status is not None
+    assert not resp_status["result"].get("isError", False)
+    content_status = json.loads(resp_status["result"]["content"][0]["text"])
+    assert content_status["ok"] is True
+    assert content_status["action"] == "status"
+    assert content_status["chainId"] == "vaelor-mainnet-1"
+    assert content_status["validatorCount"] == 5
+    assert content_status["stakingApyPct"] == 8.5
+    assert "totalSupplyVlr" in content_status
+
+    # 2. Test mine action via MCPServer JSON-RPC
+    req_mine = {
+        "jsonrpc": "2.0",
+        "id": 202,
+        "method": "tools/call",
+        "params": {
+            "name": "obsidian_vaelor_pouw",
+            "arguments": {
+                "action": "mine",
+                "miner": "@zoth_mcp_tester",
+                "task_type": "STDP_OBSIDIAN_INDEXING"
+            }
+        }
+    }
+    resp_mine = mcp.handle_request(req_mine)
+    assert resp_mine is not None
+    assert not resp_mine["result"].get("isError", False)
+    content_mine = json.loads(resp_mine["result"]["content"][0]["text"])
+    assert content_mine["ok"] is True
+    assert content_mine["action"] == "mine"
+    assert content_mine["miner"] == "@zoth_mcp_tester"
+    assert content_mine["rewardVlr"] > 0
+    assert "blockHash" in content_mine
+    assert content_mine["quorumStatus"] == "FINALIZED_BFT"
+
+    # 3. Test HTTP POST /api/mcp/call with obsidian_vaelor_pouw
+    status, _, body = _http_post(f"{base_url}/api/mcp/call", {
+        "name": "obsidian_vaelor_pouw",
+        "arguments": {
+            "action": "mine",
+            "miner": "@zoth_http_caller",
+            "task_type": "STDP_OBSIDIAN_INDEXING"
+        }
+    })
+    assert status == 200
+    http_data = json.loads(body.decode("utf-8"))
+    assert http_data["ok"] is True
+    assert http_data["tool"] == "obsidian_vaelor_pouw"
+    res = http_data["result"]
+    assert res["ok"] is True
+    assert res["action"] == "mine"
+    assert res["miner"] == "@zoth_http_caller"
+    assert res["rewardVlr"] > 0
+    assert "blockHash" in res
+
+    # 4. Test HTTP POST /api/mcp with standard JSON-RPC 2.0 tools/call
+    status, _, body = _http_post(f"{base_url}/api/mcp", {
+        "jsonrpc": "2.0",
+        "id": 303,
+        "method": "tools/call",
+        "params": {
+            "name": "obsidian_vaelor_pouw",
+            "arguments": {"action": "status"}
+        }
+    })
+    assert status == 200
+    rpc_data = json.loads(body.decode("utf-8"))
+    assert rpc_data.get("jsonrpc") == "2.0"
+    assert rpc_data.get("id") == 303
+    assert not rpc_data["result"].get("isError", False)
+    rpc_res = json.loads(rpc_data["result"]["content"][0]["text"])
+    assert rpc_res["ok"] is True
+    assert rpc_res["action"] == "status"
+
 
 
 

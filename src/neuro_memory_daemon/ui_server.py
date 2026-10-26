@@ -1739,13 +1739,13 @@ health_score: 100
             return
 
         # MCP Tools Discovery over HTTP (GET)
-        elif path in ("/api/mcp/tools", "/v1/mcp/tools"):
+        elif path in ("/api/mcp/tools", "/v1/mcp/tools", "/api/mcp", "/v1/mcp"):
             try:
                 from .mcp_server import MCPServer
             except ImportError:
                 from neuro_memory_daemon.mcp_server import MCPServer
             mcp = MCPServer(daemon=daemon)
-            self._send_json({"ok": True, "count": len(mcp.tools), "tools": list(mcp.tools.values())})
+            self._send_json({"ok": True, "service": "neuro-memory-daemon", "protocol": "MCP 2024-11-05", "count": len(mcp.tools), "tools": list(mcp.tools.values())})
             return
 
         # Serve Static UI Files
@@ -2303,6 +2303,17 @@ health_score: 100
                 return
             result, status_code = self._save_obsidian_note(vault_dir, daemon, rel_path, str(content))
             self._send_json(result, status=status_code)
+            return
+
+        # JSON-RPC 2.0 MCP Request Dispatcher over HTTP (POST)
+        if path in ("/api/mcp", "/v1/mcp"):
+            try:
+                from .mcp_server import MCPServer
+            except ImportError:
+                from neuro_memory_daemon.mcp_server import MCPServer
+            mcp = MCPServer(daemon=daemon)
+            rpc_res = mcp.handle_request(body)
+            self._send_json(rpc_res if rpc_res is not None else {"jsonrpc": "2.0", "result": None})
             return
 
         # MCP Tool Invocation over HTTP (POST)

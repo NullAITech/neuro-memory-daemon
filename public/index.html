@@ -2797,18 +2797,18 @@ curl -X POST http://127.0.0.1:8788/api/recall \
           </div>
         </div>
 
-        <!-- 15-Tool MCP JSON-RPC Playground & Client Configuration (#obsidian-mcp-playground) -->
+        <!-- 21-Tool MCP JSON-RPC Playground & Client Configuration (#obsidian-mcp-playground) -->
         <div class="wiki-panel" id="obsidian-mcp-playground" style="margin-top:16px;">
           <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
             <div style="display:flex; align-items:center; gap:8px;">
               <span style="font-size:20px;">🔌</span>
               <div>
-                <div style="font-size:15px; font-weight:700; color:#F59E0B;">15-Tool MCP JSON-RPC Playground &amp; Client Configuration</div>
+                <div style="font-size:15px; font-weight:700; color:#F59E0B;">21-Tool MCP JSON-RPC Playground &amp; Client Configuration</div>
                 <div style="font-size:11.5px; color:var(--md-on-surface-variant);">Interactive Model Context Protocol testing sandbox &amp; live runner for Claude, Cursor, Grok, and Antigravity agents.</div>
               </div>
             </div>
             <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-              <span class="wiki-tag-pill" style="color:#F59E0B; border-color:rgba(245,158,11,0.3); font-size:11px;" id="mcp-tools-badge">15 MCP Tools Registered</span>
+              <span class="wiki-tag-pill" style="color:#F59E0B; border-color:rgba(245,158,11,0.3); font-size:11px;" id="mcp-tools-badge">21 MCP Tools Registered</span>
               <button class="btn btn-outlined" id="btn-copy-mcp-config" onclick="copyMcpClientConfig()" style="border-color:rgba(245,158,11,0.4); color:#FCD34D; font-size:11.5px; padding:6px 12px; border-radius:6px; display:inline-flex; align-items:center; gap:6px;">
                 <span>📋</span> Copy Claude / Cursor / Grok MCP Config
               </button>
@@ -6050,13 +6050,19 @@ curl -X POST http://127.0.0.1:8788/api/recall \
     }
 
     // ---------------------------------------------------------
-    // 15-Tool MCP JSON-RPC Playground & Client Configuration
+    // 21-Tool MCP JSON-RPC Playground & Client Configuration
     // ---------------------------------------------------------
     const MCP_TOOL_SAMPLES = {
       obsidian_doctor_audit: '{}',
       obsidian_vault_search: '{\n  "query": "Zoth OS",\n  "limit": 5\n}',
       obsidian_wiki_synthesize: '{\n  "topic": "Vaelor Account-Lattice & PoUW Protocol"\n}',
       obsidian_canvas_generate: '{\n  "topic": "STDP Memory Cortex & Neural Plasticity"\n}',
+      obsidian_daily_log: '{\n  "entry": "Synchronized Vaelor Layer-1 PoUW cognitive mining with Obsidian Second Brain."\n}',
+      obsidian_backlinks_inspect: '{\n  "note": "00 Home"\n}',
+      obsidian_bundle_export: '{\n  "refresh": true\n}',
+      obsidian_note_read: '{\n  "path": "00 Home.md"\n}',
+      obsidian_note_write: '{\n  "relPath": "04-Ingested/vaelor-l1-note.md",\n  "content": "# Vaelor Layer-1 PoUW\\n\\nFeeless DAG with STDP cognitive mining."\n}',
+      obsidian_vaelor_pouw: '{\n  "action": "mine",\n  "miner": "@zoth",\n  "task_type": "STDP_OBSIDIAN_INDEXING"\n}',
       memory_recall: '{\n  "query": "Obsidian Second Brain",\n  "top_k": 5\n}',
       memory_store: '{\n  "text": "Synchronized Obsidian Second Brain with STDP memory cortex.",\n  "category": "semantic",\n  "importance": 0.8\n}',
       memory_search: '{\n  "query": "Zoth",\n  "limit": 5\n}',
@@ -6098,14 +6104,14 @@ curl -X POST http://127.0.0.1:8788/api/recall \
 
       let html = '';
       if (obsidianTools.length > 0) {
-        html += '<optgroup label="💎 Obsidian Second Brain Tools (4 Tools)">';
+        html += `<optgroup label="💎 Obsidian Second Brain & Vaelor Tools (${obsidianTools.length} Tools)">`;
         obsidianTools.forEach(t => {
           html += `<option value="${escapeHtml(t.name)}">${escapeHtml(t.name)}</option>`;
         });
         html += '</optgroup>';
       }
       if (cognitiveTools.length > 0) {
-        html += '<optgroup label="🧠 Cognitive & STDP Memory Cortex Tools (11 Tools)">';
+        html += `<optgroup label="🧠 Cognitive & STDP Memory Cortex Tools (${cognitiveTools.length} Tools)">`;
         cognitiveTools.forEach(t => {
           html += `<option value="${escapeHtml(t.name)}">${escapeHtml(t.name)}</option>`;
         });
@@ -6220,6 +6226,12 @@ curl -X POST http://127.0.0.1:8788/api/recall \
             "env": {
               "PYTHONPATH": "/home/zoth/NullAITech/neuro-memory-daemon/src"
             }
+          },
+          "vaelor-l1": {
+            "command": "node",
+            "args": [
+              "/home/zoth/NullAITech/vaelor-network/src/mcp/vaelor_mcp.js"
+            ]
           }
         }
       };
