@@ -215,7 +215,7 @@
   // HTML escaping utility for safe HUD text injection
   function escapeHtml(str) {
     if (typeof str !== 'string') return String(str || '');
-    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    return str.replace(/&/g, '&').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
   // Pure Web Audio API Synthesizer for Bio-Resonant Synaptic Feedback (Zero Files/CDNs)

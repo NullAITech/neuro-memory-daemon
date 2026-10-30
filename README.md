@@ -464,6 +464,39 @@ print(f"Consolidated: {stats['strengthened_synapses']} synapses strengthened.")
 
 ---
 
+## 💻 ZothOS CLI & MCP Commands
+
+`neuro-memory-daemon` is pre-installed in **ZothOS** as a system-wide executable (`neuro-memory-daemon` in `/usr/local/bin/` and `~/.local/bin/`).
+
+```bash
+# Check version and memory substrate statistics
+neuro-memory-daemon --version
+neuro-memory-daemon stats
+
+# Store a new associative memory engram
+neuro-memory-daemon store "Configured distributed consensus" --tags consensus,raft --category architecture --importance 1.4
+
+# Pattern completion recall query
+neuro-memory-daemon recall "distributed raft" --top-k 3
+
+# Trigger sleep consolidation and synaptic pruning
+neuro-memory-daemon consolidate
+
+# Launch Memory Studio Web Cockpit (:8094)
+neuro-memory-daemon serve
+```
+
+---
+
+## ☕ 100% Free & Open-Access Architecture (Zero Paywalls)
+
+All tools, memory substrates, graph visualizers, and MCP tools are **100% free and unlocked by default**.
+
+- **Buy Us a Coffee (Stripe)**: [https://buy.stripe.com/3cIfZg27PdKo2D64Ocfw40X](https://buy.stripe.com/3cIfZg27PdKo2D64Ocfw40X)
+- **Solana Tip Address**: `GG2eQbVh8ut1BK6j1A2tz7pSySdLpD38BgyEhGcxdXoK` (`solana:GG2eQbVh8ut1BK6j1A2tz7pSySdLpD38BgyEhGcxdXoK`)
+
+---
+
 ## 🧪 Test Suite & Verification
 
 The test suite provides comprehensive coverage across storage engines, STDP algorithms, graph visualizers, MCP protocol handlers, CLI commands, UI server endpoints, and Obsidian Second Brain integrations.
