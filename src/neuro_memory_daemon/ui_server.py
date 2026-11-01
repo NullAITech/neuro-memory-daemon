@@ -322,8 +322,8 @@ class StudioHTTPRequestHandler(BaseHTTPRequestHandler):
                     break
 
         if not target_base:
-            # Default to Zoth 71 Sovereign Tools.base or first base
-            target_base = next((b for b in all_bases if "71 Sovereign Tools" in b.name or "Sovereign Tools" in b.name), next((b for b in all_bases if "Tools" in b.name), all_bases[0] if all_bases else None))
+            # Default to Zoth 72 Sovereign Tools.base or first base
+            target_base = next((b for b in all_bases if "72 Sovereign Tools" in b.name or "Sovereign Tools" in b.name), next((b for b in all_bases if "Tools" in b.name), all_bases[0] if all_bases else None))
 
         if not target_base or not target_base.is_file():
             return {"ok": False, "error": f"Base '{base_name}' not found", "totalMatched": 0, "columns": [], "rows": []}
@@ -2267,7 +2267,7 @@ health_score: 100
                 "Netrunner Cyber-Cortex Knowledge Map.canvas",
                 "Zoth Memory Stratum.base",
                 "Zoth Fleet & Daemons.base",
-                "Zoth 71 Sovereign Tools.base",
+                "Zoth 72 Sovereign Tools.base",
                 "Zoth Autonomous Agents.base",
                 "Zoth LLM Wiki Index.base",
                 "Vaelor Ecosystem & Patronage Ledger.base",

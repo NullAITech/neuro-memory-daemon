@@ -48,7 +48,7 @@ def _seed_home(home: Path) -> None:
     )
     _write(
         home / ".gemini" / "config" / "GEMINI.md",
-        "# Neal Frazier\nWorkspace root for projects: ~/NullAITech\n",
+        "# 1nc0gn30\nWorkspace root for projects: ~/NullAITech\n",
     )
 
 

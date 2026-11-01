@@ -1,17 +1,20 @@
 #!/usr/bin/env bash
-# Local neuro-memory CLI shim. `web` / `desktop` / no args open the Studio.
-set -u
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-CMD="${1:-web}"
+# ==============================================================================
+# ZothOS Neuro-Memory Biological Substrate & Daemon CLI Wrapper
+# Engineered by 1nc0gn30 (@1nc0gn30) • NullAI Platform
+# ==============================================================================
+set -e
 
-case "$CMD" in
-  web|desktop|studio|everywhere|"")
-    exec "$ROOT/bin/zoth-memory"
-    ;;
-esac
+REPO_DIR="/home/zoth/NullAITech/neuro-memory-daemon"
+[[ ! -d "$REPO_DIR" ]] && REPO_DIR="/opt/neuro-memory-daemon"
+PRIMARY_BIN="$REPO_DIR/bin/neuro-memory.js"
 
-export PYTHONPATH="${ROOT}/src${PYTHONPATH:+:$PYTHONPATH}"
-if [[ -x /opt/zothos-ai-env/bin/python3 ]]; then
-  exec /opt/zothos-ai-env/bin/python3 -m neuro_memory_daemon.cli "$@"
+if [[ -d "$REPO_DIR/src/neuro_memory_daemon" ]]; then
+    export PYTHONPATH="$REPO_DIR/src:${PYTHONPATH:-}"
+    exec python3 -m neuro_memory_daemon.cli "$@"
+elif [[ -x "$PRIMARY_BIN" ]]; then
+    exec "$PRIMARY_BIN" "$@"
+else
+    echo "Error: neuro-memory not found in $REPO_DIR" >&2
+    exit 1
 fi
-exec python3 -m neuro_memory_daemon.cli "$@"

@@ -316,7 +316,7 @@ mcp_servers:
 
 ## 💎 Obsidian Second Brain Integration
 
-The daemon serves as the real-time cognitive coprocessor for Neal Frazier's Obsidian Second Brain vault (`/home/zoth/Documents/Obsidian Vault/`), enforcing strict adherence to official `@kepano` Obsidian specifications:
+The daemon serves as the real-time cognitive coprocessor for 1nc0gn30's Obsidian Second Brain vault (`/home/zoth/Documents/Obsidian Vault/`), enforcing strict adherence to official `@kepano` Obsidian specifications:
 - **Obsidian Flavored Markdown (OFM)**: Native wikilinks (`[[Note Name]]`), section anchors (`[[Note#Heading]]`), callouts (`> [!NOTE]`), and frontmatter properties (1,733 indexed notes).
 - **JSON Canvas 1.0 (`.canvas`)**: Strict JSON node and edge coordinate schemas (18 verified canvases in vault).
 - **Obsidian Bases (`.base`)**: Structured database schemas with YAML frontmatter, custom filters, and computed formulas (20 verified bases in vault).
@@ -514,4 +514,4 @@ neuro-memory test
 ---
 
 ## 📜 License
-Apache-2.0. Open-source and freely extensible for autonomous AI agent research and development. Engineered by Neal Frazier Tech (@1nc0gn30) • NullAI Platform.
+Apache-2.0. Open-source and freely extensible for autonomous AI agent research and development. Engineered by 1nc0gn30 (@1nc0gn30) • NullAI Platform.
